@@ -7,26 +7,24 @@ use App\Enums\TeamRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Teams\DeleteTeamRequest;
 use App\Http\Requests\Teams\SaveTeamRequest;
-use App\Models\Membership;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
-use Inertia\Inertia;
-use Inertia\Response;
+use Illuminate\Contracts\View\View;
 
 class TeamController extends Controller
 {
     /**
      * Display a listing of the user's teams.
      */
-    public function index(Request $request): Response
+    public function index(Request $request): View
     {
         $user = $request->user();
 
-        return Inertia::render('teams/index', [
+        return view('teams.index', [
             'teams' => $user->toUserTeams(includeCurrent: true),
         ]);
     }
@@ -40,50 +38,24 @@ class TeamController extends Controller
 
         $team = $createTeam->handle($request->user(), $request->validated('name'));
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Team created.')]);
-
-        return to_route('teams.edit', ['team' => $team->slug]);
+        return to_route('teams.edit', ['team' => $team->slug])->with('toast', __('Team created.'));
     }
 
     /**
      * Show the team edit page.
      */
-    public function edit(Request $request, Team $team): Response
+    public function edit(Request $request, Team $team): View
     {
         Gate::authorize('view', $team);
 
         $user = $request->user();
 
-        return Inertia::render('teams/edit', [
-            'team' => [
-                'id' => $team->id,
-                'name' => $team->name,
-                'slug' => $team->slug,
-                'isPersonal' => $team->is_personal,
-            ],
-            'members' => $team->members()->get()->map(function (User $member) {
-                /** @var Membership $membership */
-                $membership = $member->getRelation('pivot');
-
-                return [
-                    'id' => $member->id,
-                    'name' => $member->name,
-                    'email' => $member->email,
-                    'avatar' => $member->avatar ?? null,
-                    'role' => $membership->role->value,
-                    'role_label' => $membership->role->label(),
-                ];
-            }),
+        return view('teams.edit', [
+            'team' => $team,
+            'members' => $team->members()->get(),
             'invitations' => $team->invitations()
                 ->whereNull('accepted_at')
-                ->get()
-                ->map(fn ($invitation) => [
-                    'code' => $invitation->code,
-                    'email' => $invitation->email,
-                    'role' => $invitation->role->value,
-                    'role_label' => $invitation->role->label(),
-                    'created_at' => $invitation->created_at->toISOString(),
-                ]),
+                ->get(),
             'permissions' => $user->toTeamPermissions($team),
             'availableRoles' => TeamRole::assignable(),
         ]);
@@ -104,9 +76,7 @@ class TeamController extends Controller
             return $team;
         });
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Team updated.')]);
-
-        return to_route('teams.edit', ['team' => $team->slug]);
+        return to_route('teams.edit', ['team' => $team->slug])->with('toast', __('Team updated.'));
     }
 
     /**
@@ -142,9 +112,7 @@ class TeamController extends Controller
             $user->switchTeam($fallbackTeam);
         }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('You left the team ":name"', ['name' => $team->name])]);
-
-        return to_route('teams.index');
+        return to_route('teams.index')->with('toast', __('You left the team ":name"', ['name' => $team->name]));
     }
 
     /**
@@ -171,8 +139,6 @@ class TeamController extends Controller
             $user->switchTeam($fallbackTeam);
         }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Team deleted.')]);
-
-        return to_route('teams.index');
+        return to_route('teams.index')->with('toast', __('Team deleted.'));
     }
 }

@@ -7,8 +7,7 @@ use App\Http\Requests\Settings\PasswordUpdateRequest;
 use App\Http\Requests\Settings\TwoFactorAuthenticationRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\Rules\Password;
-use Inertia\Inertia;
-use Inertia\Response;
+use Illuminate\Contracts\View\View;
 use Laravel\Fortify\Features;
 
 class SecurityController extends Controller
@@ -16,8 +15,9 @@ class SecurityController extends Controller
     /**
      * Show the user's security settings page.
      */
-    public function edit(TwoFactorAuthenticationRequest $request): Response
+    public function edit(TwoFactorAuthenticationRequest $request): View
     {
+        $user = $request->user();
         $props = [
             /* @chisel-2fa */
             'canManageTwoFactor' => Features::canManageTwoFactorAuthentication(),
@@ -41,19 +41,21 @@ class SecurityController extends Controller
                     ->all()
                 : [],
             /* @end-chisel-passkeys */
-            'passwordRules' => Password::defaults()->toPasswordRulesString(),
+            'passwordRules' => Password::defaults()?->toPasswordRulesString() ?? '',
+            'qrCodeSvg' => $user->two_factor_secret ? $user->twoFactorQrCodeSvg() : null,
+            'recoveryCodes' => $user->two_factor_recovery_codes ? $user->recoveryCodes() : [],
         ];
 
         /* @chisel-2fa */
         if (Features::canManageTwoFactorAuthentication()) {
             $request->ensureStateIsValid();
 
-            $props['twoFactorEnabled'] = $request->user()->hasEnabledTwoFactorAuthentication();
+            $props['twoFactorEnabled'] = $user->hasEnabledTwoFactorAuthentication();
             $props['requiresConfirmation'] = Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm');
         }
         /* @end-chisel-2fa */
 
-        return Inertia::render('settings/security', $props);
+        return view('settings.security', $props);
     }
 
     /**
@@ -65,8 +67,6 @@ class SecurityController extends Controller
             'password' => $request->password,
         ]);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Password updated.')]);
-
-        return back();
+        return back()->with('toast', __('Password updated.'));
     }
 }

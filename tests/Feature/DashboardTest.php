@@ -7,7 +7,6 @@ use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class DashboardTest extends TestCase
@@ -54,15 +53,15 @@ class DashboardTest extends TestCase
             ->get(route('dashboard'));
 
         $response->assertOk();
-        $response->assertInertia(fn (Assert $page) => $page
-            ->component('dashboard')
-            ->has('pendingInvitations', 1)
-            ->where('pendingInvitations.0.code', $invitation->code)
-            ->where('pendingInvitations.0.inviterName', 'Taylor Otwell')
-            ->where('pendingInvitations.0.team.name', 'Laravel Team')
-            ->where('pendingInvitations.0.team.slug', $team->slug)
-            ->missing('pendingInvitations.0.teamName'),
-        );
+        $response->assertViewIs('dashboard')
+            ->assertViewHas('pendingInvitations', function ($invitations) use ($invitation, $team) {
+                return $invitations->count() === 1
+                    && $invitations[0]['code'] === $invitation->code
+                    && $invitations[0]['inviterName'] === 'Taylor Otwell'
+                    && $invitations[0]['team']['name'] === 'Laravel Team'
+                    && $invitations[0]['team']['slug'] === $team->slug
+                    && ! array_key_exists('teamName', $invitations[0]);
+            });
     }
 
     public function test_dashboard_does_not_include_accepted_invitations()
@@ -84,10 +83,7 @@ class DashboardTest extends TestCase
             ->get(route('dashboard'));
 
         $response->assertOk();
-        $response->assertInertia(fn (Assert $page) => $page
-            ->component('dashboard')
-            ->has('pendingInvitations', 0),
-        );
+        $response->assertViewIs('dashboard')->assertViewHas('pendingInvitations', fn ($invitations) => $invitations->isEmpty());
     }
 
     public function test_dashboard_excludes_expired_invitations_without_deleting_them()
@@ -109,10 +105,7 @@ class DashboardTest extends TestCase
             ->get(route('dashboard'));
 
         $response->assertOk();
-        $response->assertInertia(fn (Assert $page) => $page
-            ->component('dashboard')
-            ->has('pendingInvitations', 0),
-        );
+        $response->assertViewIs('dashboard')->assertViewHas('pendingInvitations', fn ($invitations) => $invitations->isEmpty());
 
         $this->assertDatabaseHas('team_invitations', [
             'id' => $invitation->id,
@@ -138,10 +131,7 @@ class DashboardTest extends TestCase
             ->get(route('dashboard'));
 
         $response->assertOk();
-        $response->assertInertia(fn (Assert $page) => $page
-            ->component('dashboard')
-            ->has('pendingInvitations', 0),
-        );
+        $response->assertViewIs('dashboard')->assertViewHas('pendingInvitations', fn ($invitations) => $invitations->isEmpty());
 
         $this->assertDatabaseHas('team_invitations', [
             'id' => $invitation->id,

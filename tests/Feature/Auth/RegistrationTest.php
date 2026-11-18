@@ -7,7 +7,6 @@ use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
@@ -36,11 +35,8 @@ class RegistrationTest extends TestCase
         $response = $this->get(route('register', ['invitation' => $invitation->code]));
 
         $response->assertOk();
-        $response->assertInertia(fn (Assert $page) => $page
-            ->component('auth/register')
-            ->where('teamInvitation.code', $invitation->code)
-            ->where('teamInvitation.teamName', 'Laravel Team'),
-        );
+        $response->assertViewIs('auth.register')
+            ->assertViewHas('teamInvitation', fn ($context) => $context['code'] === $invitation->code && $context['teamName'] === 'Laravel Team');
     }
 
     public function test_new_users_can_register()

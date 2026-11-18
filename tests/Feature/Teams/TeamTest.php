@@ -7,7 +7,6 @@ use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
-use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class TeamTest extends TestCase
@@ -95,11 +94,8 @@ class TeamTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('teams/edit')
-                ->where('members.0.role', TeamRole::Owner->value)
-                ->where('members.0.role_label', TeamRole::Owner->label()),
-            );
+            ->assertViewIs('teams.edit')
+            ->assertViewHas('members', fn ($members) => $members->first()->pivot->role === TeamRole::Owner);
     }
 
     public function test_teams_can_be_updated_by_owners()
@@ -274,7 +270,7 @@ class TeamTest extends TestCase
             ->delete(route('teams.leave', $team));
 
         $response->assertRedirect(route('teams.index'));
-        $response->assertInertiaFlash('toast', ['type' => 'success', 'message' => "You left the team \"{$team->name}\""]);
+        $response->assertSessionHas('toast', "You left the team \"{$team->name}\"");
 
         $this->assertFalse($member->fresh()->belongsToTeam($team));
     }

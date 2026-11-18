@@ -207,7 +207,7 @@ class TeamInvitationTest extends TestCase
             ->post(route('invitations.accept', $invitation));
 
         $response->assertRedirect(route('dashboard'));
-        $response->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Invitation accepted.']);
+        $response->assertSessionHas('toast', 'Invitation accepted.');
 
         $this->assertTrue($invitedUser->fresh()->belongsToTeam($team));
         $this->assertNotNull($invitation->fresh()->accepted_at);

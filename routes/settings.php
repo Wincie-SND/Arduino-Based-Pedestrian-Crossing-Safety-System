@@ -31,7 +31,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('throttle:6,1')
         ->name('user-password.update');
 
-    Route::inertia('settings/appearance', 'settings/appearance')->name('appearance.edit');
+    Route::get('settings/appearance', fn () => view('settings.appearance'))->name('appearance.edit');
+    Route::post('settings/appearance', function (\Illuminate\Http\Request $request) {
+        $appearance = $request->validate(['appearance' => ['required', 'in:light,dark,system']])['appearance'];
+
+        return back()->withCookie(cookie('appearance', $appearance, 60 * 24 * 365))->with('toast', __('Appearance updated.'));
+    })->name('appearance.update');
 
     Route::get('settings/teams', [TeamController::class, 'index'])->name('teams.index');
     Route::post('settings/teams', [TeamController::class, 'store'])->name('teams.store');

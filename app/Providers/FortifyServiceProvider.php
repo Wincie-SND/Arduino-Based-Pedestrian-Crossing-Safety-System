@@ -25,7 +25,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
-use Inertia\Inertia;
 use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
 /* @chisel-registration */
 use Laravel\Fortify\Contracts\RegisterResponse as RegisterResponseContract;
@@ -91,39 +90,40 @@ class FortifyServiceProvider extends ServiceProvider
      */
     private function configureViews(): void
     {
-        Fortify::loginView(fn (Request $request) => Inertia::render('auth/login', [
+        Fortify::loginView(fn (Request $request) => view('auth.login', [
             'canResetPassword' => Features::enabled(Features::resetPasswords()),
+            'canUsePasskey' => Features::enabled(Features::passkeys()),
             'status' => $request->session()->get('status'),
             'teamInvitation' => $this->teamInvitation($request),
         ]));
 
-        Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/reset-password', [
+        Fortify::resetPasswordView(fn (Request $request) => view('auth.reset-password', [
             'email' => $request->email,
             'token' => $request->route('token'),
         ]));
 
-        Fortify::requestPasswordResetLinkView(fn (Request $request) => Inertia::render('auth/forgot-password', [
+        Fortify::requestPasswordResetLinkView(fn (Request $request) => view('auth.forgot-password', [
             'status' => $request->session()->get('status'),
         ]));
 
         /* @chisel-email-verification */
-        Fortify::verifyEmailView(fn (Request $request) => Inertia::render('auth/verify-email', [
+        Fortify::verifyEmailView(fn (Request $request) => view('auth.verify-email', [
             'status' => $request->session()->get('status'),
         ]));
         /* @end-chisel-email-verification */
 
         /* @chisel-registration */
-        Fortify::registerView(fn (Request $request) => Inertia::render('auth/register', [
+        Fortify::registerView(fn (Request $request) => view('auth.register', [
             'teamInvitation' => $this->teamInvitation($request),
         ]));
         /* @end-chisel-registration */
 
         /* @chisel-2fa */
-        Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/two-factor-challenge'));
+        Fortify::twoFactorChallengeView(fn () => view('auth.two-factor-challenge'));
         /* @end-chisel-2fa */
 
         /* @chisel-password-confirmation */
-        Fortify::confirmPasswordView(fn () => Inertia::render('auth/confirm-password'));
+        Fortify::confirmPasswordView(fn () => view('auth.confirm-password'));
         /* @end-chisel-password-confirmation */
     }
 
