@@ -20,6 +20,7 @@ use App\Http\Responses\TwoFactorLoginResponse;
 use App\Http\Responses\VerifyEmailResponse;
 /* @end-chisel-email-verification */
 use App\Models\TeamInvitation;
+use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -158,7 +159,7 @@ class FortifyServiceProvider extends ServiceProvider
     /**
      * Get the pending team invitation context for auth pages.
      *
-     * @return array{code: string, teamName: string}|null
+     * @return array{code: string, teamName: string, email: string, canRegister: bool}|null
      */
     private function teamInvitation(Request $request): ?array
     {
@@ -184,6 +185,10 @@ class FortifyServiceProvider extends ServiceProvider
         return [
             'code' => $invitation->code,
             'teamName' => $invitation->team->name,
+            'email' => $invitation->email,
+            'canRegister' => ! User::query()
+                ->whereRaw('LOWER(email) = ?', [Str::lower($invitation->email)])
+                ->exists(),
         ];
     }
 }

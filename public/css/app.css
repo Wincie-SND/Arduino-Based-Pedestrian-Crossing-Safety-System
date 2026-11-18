@@ -82,13 +82,13 @@ th { color: #66717d; font-size: .78rem; text-transform: uppercase; letter-spacin
 .login-form header h2 { margin: 0; color: #4a4a4a; font-size: clamp(2rem, 3.4vw, 2.5rem); letter-spacing: -.035em; }
 .login-form header p { margin: .3rem 0 0; color: #5b5b5b; font-size: .9rem; }
 .login-form .field { gap: .45rem; margin-bottom: 1.2rem; }
-.login-form .field label { font-size: .75rem; }
-.login-form .field input { height: 2.8rem; box-shadow: 0 2px 4px #0002; }
+.login-form .field label { color: #1b252d; font-size: 1.125rem; font-weight: 700; line-height: 1.5; }
+.login-form .field input { height: 3.25rem; border-color: #7c8993; background: #fff; color: #15212a; font-size: 1.05rem; box-shadow: 0 2px 4px #0002; }
+.login-form .field input::placeholder { color: #596671; opacity: 1; }
 .login-form .field-top { display: flex; align-items: center; justify-content: space-between; }
-.login-form .field-top a { font-size: .75rem; }
-.login-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; align-items: center; margin-top: 1.5rem; }
-.signup-action { display: grid; justify-items: center; gap: .35rem; color: #626970; font-size: .75rem; text-align: center; }
-.signup-action .button { min-width: 8rem; }
+.login-form .field-top a { font-size: 1rem; }
+.login-actions { margin-top: 1.5rem; }
+.login-actions .button { width: 100%; min-height: 3.25rem; font-size: 1rem; }
 .welcome { display: grid; min-height: 75vh; place-items: center; padding: 2rem; text-align: center; }
 .welcome-content { max-width: 700px; }
 .welcome-content h1 { margin: .7rem 0; font-size: clamp(2.2rem, 6vw, 4rem); letter-spacing: -.045em; }
@@ -105,6 +105,10 @@ html.dark .app-nav a, html.dark .settings-nav a, html.dark .app-user { color: #c
 html.dark .app-nav a:hover, html.dark .app-nav a.active, html.dark .settings-nav a.active, html.dark .settings-nav a:hover { background: #2c3b46; color: #fff; }
 html.dark .auth-card h1, html.dark .auth-card > p, html.dark .field label, html.dark .muted { color: #c4cdd4; }
 html.dark th, html.dark td { border-color: #38444e; }
+html.dark .login-form-panel { color-scheme: light; color: #101820; }
+html.dark .login-form .field label { color: #1b252d; }
+html.dark .login-form .field input { border-color: #7c8993; background: #fff; color: #15212a; }
+html.dark .login-form .field input::placeholder { color: #596671; opacity: 1; }
 
 @media (max-width: 850px) {
     .app-header { flex-wrap: wrap; }
@@ -126,8 +130,6 @@ html.dark th, html.dark td { border-color: #38444e; }
     .login-form-panel { min-height: 570px; padding: 2.5rem 1.5rem; }
 }
 @media (max-width: 420px) {
-    .login-actions { grid-template-columns: 1fr; }
-    .signup-action { display: flex; justify-content: center; }
     .row-actions { align-items: stretch; flex-direction: column; }
     .row-actions form, .row-actions .button { width: 100%; }
 }

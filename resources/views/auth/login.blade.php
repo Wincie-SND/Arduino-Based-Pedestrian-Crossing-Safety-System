@@ -51,9 +51,6 @@
                     <label class="checkbox-line"><input type="checkbox" name="remember" value="1" @checked(old('remember'))> Remember me</label>
                     <div class="login-actions">
                         <button class="button" type="submit">Sign In</button>
-                        @if (Route::has('register'))
-                            <div class="signup-action"><span>Don’t have an account?</span><a class="button" href="{{ route('register', $teamInvitation ? ['invitation' => $teamInvitation['code']] : []) }}">Sign Up</a></div>
-                        @endif
                     </div>
                 </form>
             </div>

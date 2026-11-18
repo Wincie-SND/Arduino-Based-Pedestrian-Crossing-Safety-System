@@ -2,43 +2,65 @@
 
 namespace App\Actions\Fortify;
 
-use App\Actions\Teams\CreateTeam;
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
+use App\Models\TeamInvitation;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
 
 class CreateNewUser implements CreatesNewUsers
 {
     use PasswordValidationRules, ProfileValidationRules;
 
-    public function __construct(private CreateTeam $createTeam)
-    {
-        //
-    }
-
     /**
      * Validate and create a newly registered user.
      *
-     * @param  array<string, string>  $input
+     * @param  array<string, mixed>  $input
      */
     public function create(array $input): User
     {
         Validator::make($input, [
             ...$this->profileRules(),
             'password' => $this->passwordRules(),
+            'invitation' => ['required', 'string'],
         ])->validate();
 
         return DB::transaction(function () use ($input) {
+            $invitation = TeamInvitation::query()
+                ->where('code', $input['invitation'])
+                ->lockForUpdate()
+                ->first();
+
+            if (
+                ! $invitation ||
+                $invitation->isAccepted() ||
+                $invitation->isExpired() ||
+                Str::lower($invitation->email) !== Str::lower($input['email'])
+            ) {
+                throw ValidationException::withMessages([
+                    'email' => __('An active invitation for this email address is required to create an account.'),
+                ]);
+            }
+
             $user = User::create([
                 'name' => $input['name'],
-                'email' => $input['email'],
+                'email' => Str::lower($input['email']),
                 'password' => $input['password'],
             ]);
 
-            $this->createTeam->handle($user, $user->name."'s Team", isPersonal: true);
+            $team = $invitation->team;
+
+            $team->memberships()->create([
+                'user_id' => $user->id,
+                'role' => $invitation->role,
+            ]);
+
+            $invitation->update(['accepted_at' => now()]);
+            $user->switchTeam($team);
 
             return $user;
         });

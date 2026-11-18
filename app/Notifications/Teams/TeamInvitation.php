@@ -44,7 +44,7 @@ class TeamInvitation extends Notification implements ShouldQueue
                 'inviterName' => $inviter->name,
                 'teamName' => $team->name,
             ]))
-            ->line(__('Log in and visit your dashboard to accept or decline this invitation.'))
+            ->line(__('If you already have a CrossGuard account, sign in and review this invitation from your dashboard. Otherwise, create an account using the invited email address and verify it to join the team.'))
             ->action(
                 __('Log in'),
                 route('login', ['invitation' => $this->invitation->code]),

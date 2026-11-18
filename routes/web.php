@@ -5,7 +5,19 @@ use App\Http\Controllers\Teams\TeamInvitationController;
 use App\Http\Middleware\EnsureTeamMembership;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome')->name('home');
+Route::get('/', function () {
+    $user = request()->user();
+
+    if (! $user) {
+        return to_route('login');
+    }
+
+    $team = $user->currentTeam ?? $user->personalTeam();
+
+    return $team
+        ? to_route('dashboard', ['current_team' => $team->slug])
+        : to_route('teams.index');
+})->name('home');
 
 Route::prefix('{current_team}')
     ->middleware(['auth', 'verified', EnsureTeamMembership::class])

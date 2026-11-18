@@ -41,16 +41,29 @@ class RegistrationTest extends TestCase
 
     public function test_new_users_can_register()
     {
+        $owner = User::factory()->create();
+        $team = Team::factory()->create();
+        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
+        $invitation = TeamInvitation::factory()->create([
+            'team_id' => $team->id,
+            'email' => 'test@example.com',
+            'role' => TeamRole::Member,
+            'invited_by' => $owner->id,
+        ]);
+
         $response = $this->post(route('register.store'), [
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => 'password',
             'password_confirmation' => 'password',
+            'invitation' => $invitation->code,
         ]);
 
         $this->assertAuthenticated();
 
         $user = User::where('email', 'test@example.com')->first();
         $response->assertRedirect(route('dashboard'));
+        $this->assertTrue($user->belongsToTeam($team));
+        $this->assertNotNull($invitation->fresh()->accepted_at);
     }
 }
