@@ -13,7 +13,7 @@ class TeamTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_the_teams_index_page_can_be_rendered()
+    public function test_the_teams_index_redirects_to_the_current_team()
     {
         $user = User::factory()->create();
 
@@ -21,7 +21,7 @@ class TeamTest extends TestCase
             ->actingAs($user)
             ->get(route('teams.index'));
 
-        $response->assertOk();
+        $response->assertRedirect(route('teams.edit', ['team' => $user->currentTeam->slug]));
     }
 
     public function test_teams_can_be_created()
