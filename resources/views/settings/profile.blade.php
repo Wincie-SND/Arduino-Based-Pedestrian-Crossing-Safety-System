@@ -1,11 +1,11 @@
-@extends('layouts.app')
+@extends('layouts.dashboard')
 @section('title', 'Profile settings')
 @section('content')
-<header class="app-heading"><h1>Profile settings</h1><p>Update your name and email address.</p></header>
-<div class="settings-grid">
+<header class="dashboard-intro settings-intro"><div><p class="eyebrow">Account settings</p><h1>Profile</h1><p class="dashboard-summary">Update your name and email address.</p></div></header>
+<div class="settings-grid settings-dashboard-grid">
     @include('settings.partials.navigation', ['active' => 'profile'])
     <div class="content-column">
-        <section class="card">
+        <section class="dashboard-panel settings-panel">
             <h2 class="section-title">Profile information</h2><p class="muted">Manage the name and email address associated with your account.</p>
             @if ($errors->any())<div class="notice error">{{ $errors->first() }}</div>@endif
             <form method="post" action="{{ route('profile.update') }}">
@@ -19,7 +19,7 @@
                 <button class="button" type="submit">Save profile</button>
             </form>
         </section>
-        <section class="card">
+        <section class="dashboard-panel settings-panel">
             <h2 class="section-title">Delete account</h2><p class="muted">Permanently remove your account and its associated information.</p>
             <form method="post" action="{{ route('profile.destroy') }}" onsubmit="return confirm('Delete your account permanently?')">
                 @csrf @method('delete')

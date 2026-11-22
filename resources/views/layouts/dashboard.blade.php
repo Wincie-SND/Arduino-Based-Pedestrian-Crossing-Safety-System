@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Dashboard') · TOMECO CrossGuard</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/css/app.css">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ filemtime(public_path('css/app.css')) }}">
     <script>
         (() => {
             const appearance = @json($appearance ?? 'system');
@@ -25,19 +25,25 @@
             <div class="sidebar-divider"></div>
             <p class="sidebar-label">Workspace</p>
             <nav class="dashboard-nav" aria-label="Dashboard navigation">
-                <a @class(['dashboard-nav-link', 'active' => request()->routeIs('dashboard')]) href="{{ route('dashboard', ['current_team' => request()->route('current_team')]) }}" @if (request()->routeIs('dashboard')) aria-current="page" @endif>
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>
-                    <span>Dashboard</span>
-                </a>
-                <a @class(['dashboard-nav-link', 'active' => request()->routeIs('violations.*')]) href="{{ route('violations.index', ['current_team' => request()->route('current_team')]) }}" @if (request()->routeIs('violations.*')) aria-current="page" @endif>
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.75h10a2 2 0 0 1 2 2v14.5l-2.3-1.5-2.2 1.5-2.5-1.5-2.5 1.5-2.2-1.5L5 20.25V5.75a2 2 0 0 1 2-2Z"/><path d="M8.5 9h7M8.5 13h7M8.5 16.5h3"/></svg>
-                    <span>Violation reports</span>
-                </a>
-                <a class="dashboard-nav-link" href="{{ route('teams.index') }}">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20"/><circle cx="9.5" cy="7" r="3.5"/><path d="M17 11a3.5 3.5 0 1 0-1.5-6.66M17 14.5h.5a4 4 0 0 1 4 4V20"/></svg>
-                    <span>User management</span>
-                </a>
-                <a class="dashboard-nav-link" href="{{ route('appearance.edit') }}">
+                @if (auth()->user()->currentTeam)
+                    <a @class(['dashboard-nav-link', 'active' => request()->routeIs('dashboard')]) href="{{ route('dashboard', ['current_team' => request()->route('current_team')]) }}" @if (request()->routeIs('dashboard')) aria-current="page" @endif>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>
+                        <span>Dashboard</span>
+                    </a>
+                    <a @class(['dashboard-nav-link', 'active' => request()->routeIs('violations.*')]) href="{{ route('violations.index', ['current_team' => request()->route('current_team')]) }}" @if (request()->routeIs('violations.*')) aria-current="page" @endif>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.75h10a2 2 0 0 1 2 2v14.5l-2.3-1.5-2.2 1.5-2.5-1.5-2.5 1.5-2.2-1.5L5 20.25V5.75a2 2 0 0 1 2-2Z"/><path d="M8.5 9h7M8.5 13h7M8.5 16.5h3"/></svg>
+                        <span>Violation reports</span>
+                    </a>
+                @endif
+                @if (auth()->user()->currentTeam)
+                    @can('inviteMember', auth()->user()->currentTeam)
+                        <a @class(['dashboard-nav-link', 'active' => request()->routeIs('teams.*')]) href="{{ route('teams.index') }}" @if (request()->routeIs('teams.*')) aria-current="page" @endif>
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20"/><circle cx="9.5" cy="7" r="3.5"/><path d="M17 11a3.5 3.5 0 1 0-1.5-6.66M17 14.5h.5a4 4 0 0 1 4 4V20"/></svg>
+                            <span>User management</span>
+                        </a>
+                    @endcan
+                @endif
+                <a @class(['dashboard-nav-link', 'active' => request()->routeIs('profile.*', 'security.*', 'appearance.*', 'password.confirm*')]) href="{{ route('appearance.edit') }}" @if (request()->routeIs('profile.*', 'security.*', 'appearance.*', 'password.confirm*')) aria-current="page" @endif>
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 14 5l2.5-.2.8 2.4 2.1 1.4-.8 2.4.8 2.4-2.1 1.4-.8 2.4L14 17l-2 1.5L10 17l-2.5.2-.8-2.4-2.1-1.4.8-2.4-.8-2.4 2.1-1.4.8-2.4L10 5l2-1.5Z"/><circle cx="12" cy="11.9" r="3"/></svg>
                     <span>Settings</span>
                 </a>

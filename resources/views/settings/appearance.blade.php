@@ -1,10 +1,10 @@
-@extends('layouts.app')
+@extends('layouts.dashboard')
 @section('title', 'Appearance settings')
 @section('content')
-<header class="app-heading"><h1>Appearance settings</h1><p>Choose how CrossGuard looks on this device.</p></header>
-<div class="settings-grid">
+<header class="dashboard-intro settings-intro"><div><p class="eyebrow">Account settings</p><h1>Appearance</h1><p class="dashboard-summary">Choose how CrossGuard looks on this device.</p></div></header>
+<div class="settings-grid settings-dashboard-grid">
     @include('settings.partials.navigation', ['active' => 'appearance'])
-    <section class="card">
+    <section class="dashboard-panel settings-panel">
         <h2 class="section-title">Theme</h2><p class="muted">Your choice is saved in a browser cookie.</p>
         <form method="post" action="{{ route('appearance.update') }}" class="stack">
             @csrf

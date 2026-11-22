@@ -1,11 +1,11 @@
-@extends('layouts.app')
+@extends('layouts.dashboard')
 @section('title', 'Security settings')
 @section('content')
-<header class="app-heading"><h1>Security settings</h1><p>Manage your password and sign-in protection.</p></header>
-<div class="settings-grid">
+<header class="dashboard-intro settings-intro"><div><p class="eyebrow">Account settings</p><h1>Security</h1><p class="dashboard-summary">Manage your password and sign-in protection.</p></div></header>
+<div class="settings-grid settings-dashboard-grid">
     @include('settings.partials.navigation', ['active' => 'security'])
     <div class="content-column">
-        <section class="card">
+        <section class="dashboard-panel settings-panel">
             <h2 class="section-title">Update password</h2><p class="muted">Use a long, unique password to protect your account.</p>
             @if ($errors->any())<div class="notice error">{{ $errors->first() }}</div>@endif
             <form method="post" action="{{ route('user-password.update') }}">
@@ -18,7 +18,7 @@
         </section>
 
         @if ($canManageTwoFactor)
-            <section class="card">
+            <section class="dashboard-panel settings-panel">
                 <h2 class="section-title">Two-factor authentication</h2>
                 <p class="muted">Add an extra sign-in check with an authenticator app. Save your recovery codes somewhere safe.</p>
                 @if ($twoFactorEnabled)
@@ -49,7 +49,7 @@
         @endif
 
         @if ($canManagePasskeys)
-            <section class="card">
+            <section class="dashboard-panel settings-panel">
                 <h2 class="section-title">Passkeys</h2><p class="muted">Use a device passkey for passwordless sign-in.</p>
                 @forelse ($passkeys as $passkey)
                     <div class="row-actions" style="justify-content:space-between;padding:.75rem 0;border-bottom:1px solid #e5e9ec">

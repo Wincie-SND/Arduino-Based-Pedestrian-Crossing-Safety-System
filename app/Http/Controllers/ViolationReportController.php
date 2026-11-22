@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\CrossingIncident;
 use App\Models\CrossingIncidentEvent;
+use App\Models\Team;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -16,7 +18,7 @@ class ViolationReportController extends Controller
 {
     public function index(Request $request): View
     {
-        $team = $request->user()->currentTeam;
+        $team = $this->teamForRequest($request);
         $filters = $this->validatedFilters($request);
         $query = $this->applyFilters(
             CrossingIncident::query()->where('team_id', $team->id)->with('assignedEnforcer'),
@@ -39,9 +41,10 @@ class ViolationReportController extends Controller
         ]);
     }
 
-    public function show(Request $request, int $incident): View
+    public function show(Request $request): View
     {
-        $team = $request->user()->currentTeam;
+        $incident = (string) $request->route('incident');
+        $team = $this->teamForRequest($request);
         $record = $team->incidents()
             ->with(['assignedEnforcer', 'reviewer', 'events.user'])
             ->findOrFail($incident);
@@ -52,14 +55,15 @@ class ViolationReportController extends Controller
         ]);
     }
 
-    public function review(Request $request, int $incident): RedirectResponse
+    public function review(Request $request): RedirectResponse
     {
+        $incident = (string) $request->route('incident');
         $validated = $request->validate([
             'decision' => ['required', 'in:verify,reject,resolve,save_remarks'],
             'remarks' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $team = $request->user()->currentTeam;
+        $team = $this->teamForRequest($request);
         $decision = $validated['decision'];
         $remarks = trim($validated['remarks'] ?? '');
         $eventTitles = [
@@ -103,7 +107,7 @@ class ViolationReportController extends Controller
 
     public function export(Request $request): StreamedResponse
     {
-        $team = $request->user()->currentTeam;
+        $team = $this->teamForRequest($request);
         $records = $this->applyFilters(
             CrossingIncident::query()->where('team_id', $team->id)->with('assignedEnforcer'),
             $this->validatedFilters($request),
@@ -189,5 +193,18 @@ class ViolationReportController extends Controller
             'rejected' => 'Rejected',
             default => ucfirst(str_replace('_', ' ', $status)),
         };
+    }
+
+    private function teamForRequest(Request $request): Team
+    {
+        $routeTeam = $request->route('current_team');
+        $team = $routeTeam instanceof Team
+            ? $routeTeam
+            : Team::query()->where('slug', $routeTeam)->firstOrFail();
+        $user = $request->user();
+
+        abort_unless($user instanceof User && $user->belongsToTeam($team), 404);
+
+        return $team;
     }
 }

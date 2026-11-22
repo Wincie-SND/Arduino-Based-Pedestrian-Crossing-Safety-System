@@ -23,7 +23,6 @@
                 @if ($currentTeam)
                     <a href="{{ route('dashboard', ['current_team' => $currentTeam->slug]) }}" @class(['active' => request()->routeIs('dashboard')])>Dashboard</a>
                 @endif
-                <a href="{{ route('teams.index') }}" @class(['active' => request()->routeIs('teams.*')])>Teams</a>
                 <a href="{{ route('profile.edit') }}" @class(['active' => request()->routeIs('profile.*')])>Profile</a>
                 <a href="{{ route('security.edit') }}" @class(['active' => request()->routeIs('security.edit')])>Security</a>
                 <a href="{{ route('appearance.edit') }}" @class(['active' => request()->routeIs('appearance.edit')])>Appearance</a>

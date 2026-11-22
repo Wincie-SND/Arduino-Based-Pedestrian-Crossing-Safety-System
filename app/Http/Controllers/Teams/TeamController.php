@@ -18,15 +18,18 @@ use Illuminate\Contracts\View\View;
 class TeamController extends Controller
 {
     /**
-     * Display a listing of the user's teams.
+     * Open user management for the user's current crossing workspace.
      */
-    public function index(Request $request): View
+    public function index(Request $request): View|RedirectResponse
     {
         $user = $request->user();
+        $team = $user->currentTeam ?? $user->fallbackTeam() ?? $user->personalTeam();
 
-        return view('teams.index', [
-            'teams' => $user->toUserTeams(includeCurrent: true),
-        ]);
+        if ($team) {
+            return to_route('teams.edit', ['team' => $team->slug]);
+        }
+
+        return view('teams.index');
     }
 
     /**
@@ -46,7 +49,7 @@ class TeamController extends Controller
      */
     public function edit(Request $request, Team $team): View
     {
-        Gate::authorize('view', $team);
+        Gate::authorize('inviteMember', $team);
 
         $user = $request->user();
 

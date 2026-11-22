@@ -17,7 +17,7 @@
             <h1>Violation Reports</h1>
             <p>Review and manage potential crosswalk violations recorded by CrossGuard.</p>
         </div>
-        <a class="export-button" href="{{ route('violations.export', array_merge(['current_team' => $currentTeam->slug], request()->query())) }}">
+        <a class="export-button" style="color: #fff; background-color: #007bff;"  href="{{ route('violations.export', array_merge(['current_team' => $currentTeam->slug], request()->query())) }}">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5v11M8 10.5l4 4 4-4M4 16v3.5h16V16"/></svg>
             Export CSV
         </a>
