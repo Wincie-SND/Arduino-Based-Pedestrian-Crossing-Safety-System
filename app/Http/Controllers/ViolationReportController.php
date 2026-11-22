@@ -82,6 +82,7 @@ class ViolationReportController extends Controller
                     'verify' => 'verified',
                     'reject' => 'rejected',
                     'resolve' => 'resolved',
+                    default => throw new \LogicException('Unexpected incident review decision.'),
                 };
                 $record->reviewed_by = $request->user()->id;
                 $record->reviewed_at = now();
@@ -115,20 +116,27 @@ class ViolationReportController extends Controller
 
         return response()->streamDownload(function () use ($records): void {
             $stream = fopen('php://output', 'w');
-            fputcsv($stream, ['Incident ID', 'Date and time', 'Incident type', 'Status', 'Assigned enforcer', 'Evidence']);
 
-            foreach ($records as $record) {
-                fputcsv($stream, [
-                    $record->incident_code,
-                    $record->occurred_at->format('Y-m-d H:i:s'),
-                    $record->incident_type,
-                    $this->statusLabel($record->status),
-                    $record->assignedEnforcer?->name ?? 'Unassigned',
-                    $record->evidence_path ? 'Attached' : 'Not attached',
-                ]);
+            if ($stream === false) {
+                throw new \RuntimeException('Unable to open the CSV output stream.');
             }
 
-            fclose($stream);
+            try {
+                fputcsv($stream, ['Incident ID', 'Date and time', 'Incident type', 'Status', 'Assigned enforcer', 'Evidence']);
+
+                foreach ($records as $record) {
+                    fputcsv($stream, [
+                        $record->incident_code,
+                        $record->occurred_at->format('Y-m-d H:i:s'),
+                        $record->incident_type,
+                        $this->statusLabel($record->status),
+                        $record->assignedEnforcer->name ?? 'Unassigned',
+                        $record->evidence_path ? 'Attached' : 'Not attached',
+                    ]);
+                }
+            } finally {
+                fclose($stream);
+            }
         }, 'violation-reports-'.now()->format('Ymd').'.csv', [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);

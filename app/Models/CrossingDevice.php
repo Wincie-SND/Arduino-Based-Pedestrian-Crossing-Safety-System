@@ -24,6 +24,7 @@ class CrossingDevice extends Model
         return ['last_seen_at' => 'datetime'];
     }
 
+    /** @return BelongsTo<Team, $this> */
     public function team(): BelongsTo
     {
         return $this->belongsTo(Team::class);

@@ -41,7 +41,7 @@ class SecurityController extends Controller
                     ->all()
                 : [],
             /* @end-chisel-passkeys */
-            'passwordRules' => Password::defaults()?->toPasswordRulesString() ?? '',
+            'passwordRules' => Password::defaults()->toPasswordRulesString(),
             'qrCodeSvg' => $user->two_factor_secret ? $user->twoFactorQrCodeSvg() : null,
             'recoveryCodes' => $user->two_factor_recovery_codes ? $user->recoveryCodes() : [],
         ];
