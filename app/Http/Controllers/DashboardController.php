@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\TeamInvitation;
+use App\Models\CrossingNotification;
 use Illuminate\Http\Request;
 use Illuminate\Contracts\View\View;
 
@@ -30,9 +31,28 @@ class DashboardController extends Controller
                 ],
             ]);
 
+        $currentTeam = $request->user()->currentTeam;
+        $devices = $currentTeam->devices()->orderBy('name')->get();
+        $systemStatus = $devices->isEmpty()
+            ? 'not_connected'
+            : ($devices->contains(fn ($device) => in_array($device->status, ['warning', 'offline', 'unknown'], true))
+                ? 'attention'
+                : 'online');
+
         return view('dashboard', [
             'pendingInvitations' => $pendingInvitations,
-            'currentTeam' => $request->user()->currentTeam,
+            'currentTeam' => $currentTeam,
+            'totalViolations' => $currentTeam->incidents()->count(),
+            'activeAlerts' => CrossingNotification::query()
+                ->where('team_id', $currentTeam->id)
+                ->where('level', 'alert')
+                ->whereNull('read_at')
+                ->count(),
+            'issuesReported' => $currentTeam->issues()->count(),
+            'systemStatus' => $systemStatus,
+            'devices' => $devices,
+            'recentIncidents' => $currentTeam->incidents()->latest('occurred_at')->take(8)->get(),
+            'recentNotifications' => $currentTeam->notifications()->latest('occurred_at')->take(4)->get(),
         ]);
     }
 }

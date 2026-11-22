@@ -96,6 +96,46 @@ class Team extends Model
     }
 
     /**
+     * Get incidents recorded for this crossing.
+     *
+     * @return HasMany<CrossingIncident, $this>
+     */
+    public function incidents(): HasMany
+    {
+        return $this->hasMany(CrossingIncident::class);
+    }
+
+    /**
+     * Get devices registered for this crossing.
+     *
+     * @return HasMany<CrossingDevice, $this>
+     */
+    public function devices(): HasMany
+    {
+        return $this->hasMany(CrossingDevice::class);
+    }
+
+    /**
+     * Get issues reported for this crossing.
+     *
+     * @return HasMany<CrossingIssue, $this>
+     */
+    public function issues(): HasMany
+    {
+        return $this->hasMany(CrossingIssue::class);
+    }
+
+    /**
+     * Get notifications for this crossing.
+     *
+     * @return HasMany<CrossingNotification, $this>
+     */
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(CrossingNotification::class);
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
