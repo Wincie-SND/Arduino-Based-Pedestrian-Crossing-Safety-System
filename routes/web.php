@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ViolationReportController;
 use App\Http\Controllers\Teams\TeamInvitationController;
 use App\Http\Middleware\EnsureTeamMembership;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,10 @@ Route::prefix('{current_team}')
     ->middleware(['auth', 'verified', EnsureTeamMembership::class])
     ->group(function () {
         Route::get('dashboard', DashboardController::class)->name('dashboard');
+        Route::get('violations', [ViolationReportController::class, 'index'])->name('violations.index');
+        Route::get('violations/export', [ViolationReportController::class, 'export'])->name('violations.export');
+        Route::get('violations/{incident}', [ViolationReportController::class, 'show'])->whereNumber('incident')->name('violations.show');
+        Route::patch('violations/{incident}/review', [ViolationReportController::class, 'review'])->whereNumber('incident')->name('violations.review');
     });
 
 Route::middleware(['auth'])->group(function () {

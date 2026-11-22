@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Enums\TeamRole;
 use App\Models\CrossingDevice;
 use App\Models\CrossingIncident;
+use App\Models\CrossingIncidentEvent;
 use App\Models\CrossingIssue;
 use App\Models\CrossingNotification;
 use App\Models\Team;
@@ -92,18 +93,42 @@ class DashboardDemoSeeder extends Seeder
 
             foreach ([
                 ['code' => 'CG-2026-001', 'type' => 'Vehicle in crosswalk', 'status' => 'needs_review', 'when' => $now->copy()->subMinutes(26)],
-                ['code' => 'CG-2026-002', 'type' => 'Vehicle failed to yield', 'status' => 'confirmed', 'when' => $now->copy()->subHours(3)],
+                ['code' => 'CG-2026-002', 'type' => 'Vehicle failed to yield', 'status' => 'verified', 'when' => $now->copy()->subHours(3)],
                 ['code' => 'CG-2026-003', 'type' => 'Pedestrian signal obstruction', 'status' => 'resolved', 'when' => $now->copy()->subDay()],
             ] as $incident) {
-                CrossingIncident::updateOrCreate(
+                $record = CrossingIncident::updateOrCreate(
                     ['team_id' => $team->id, 'incident_code' => $incident['code']],
                     [
                         'incident_type' => $incident['type'],
                         'status' => $incident['status'],
                         'occurred_at' => $incident['when'],
                         'evidence_path' => null,
+                        'detection_method' => 'Ultrasonic + IR sensors',
+                        'pedestrian_status' => 'Crossing occupied',
+                        'vehicle_status' => 'Present in marked crossing',
+                        'device_status' => 'Warning light inspection needed',
+                        'alert_transmission_status' => 'Successfully dispatched',
+                        'evidence_source' => 'Camera module',
+                        'event_description' => 'A vehicle entered the marked pedestrian crossing while a pedestrian was detected in the crossing zone.',
                     ],
                 );
+
+                if ($incident['code'] === 'CG-2026-001') {
+                    foreach ([
+                        ['code' => 'detected', 'title' => 'Potential incident created', 'description' => 'Crossing sensors recorded a potential vehicle and pedestrian conflict.', 'when' => $incident['when']],
+                        ['code' => 'alert_dispatched', 'title' => 'Alert dispatched to enforcers', 'description' => 'An alert was sent to the authorized monitoring team.', 'when' => $incident['when']->copy()->addMinute()],
+                    ] as $event) {
+                        CrossingIncidentEvent::updateOrCreate(
+                            ['crossing_incident_id' => $record->id, 'event_code' => $event['code']],
+                            [
+                                'user_id' => null,
+                                'title' => $event['title'],
+                                'description' => $event['description'],
+                                'occurred_at' => $event['when'],
+                            ],
+                        );
+                    }
+                }
             }
 
             CrossingIssue::updateOrCreate(

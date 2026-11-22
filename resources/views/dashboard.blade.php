@@ -52,7 +52,7 @@
     <article class="dashboard-panel violations-panel" id="recent-violations">
         <header class="panel-heading">
             <div><h2>Recent violations</h2><p>Latest incidents recorded at this crossing.</p></div>
-            <span class="panel-link" aria-disabled="true">View all</span>
+            <a class="panel-link" href="{{ route('violations.index', ['current_team' => $currentTeam->slug]) }}">View all</a>
         </header>
         <div class="table-wrap dashboard-table-wrap">
             <table class="dashboard-table">

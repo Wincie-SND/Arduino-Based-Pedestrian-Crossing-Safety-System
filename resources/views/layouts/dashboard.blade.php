@@ -25,11 +25,11 @@
             <div class="sidebar-divider"></div>
             <p class="sidebar-label">Workspace</p>
             <nav class="dashboard-nav" aria-label="Dashboard navigation">
-                <a class="dashboard-nav-link active" href="{{ route('dashboard', ['current_team' => request()->route('current_team')]) }}" aria-current="page">
+                <a @class(['dashboard-nav-link', 'active' => request()->routeIs('dashboard')]) href="{{ route('dashboard', ['current_team' => request()->route('current_team')]) }}" @if (request()->routeIs('dashboard')) aria-current="page" @endif>
                     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>
                     <span>Dashboard</span>
                 </a>
-                <a class="dashboard-nav-link" href="#recent-violations">
+                <a @class(['dashboard-nav-link', 'active' => request()->routeIs('violations.*')]) href="{{ route('violations.index', ['current_team' => request()->route('current_team')]) }}" @if (request()->routeIs('violations.*')) aria-current="page" @endif>
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.75h10a2 2 0 0 1 2 2v14.5l-2.3-1.5-2.2 1.5-2.5-1.5-2.5 1.5-2.2-1.5L5 20.25V5.75a2 2 0 0 1 2-2Z"/><path d="M8.5 9h7M8.5 13h7M8.5 16.5h3"/></svg>
                     <span>Violation reports</span>
                 </a>
