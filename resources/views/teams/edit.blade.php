@@ -12,11 +12,11 @@
     <section class="dashboard-panel user-management-panel"><header class="panel-heading"><div><h2>Authorized users</h2><p>Accounts with access to this monitoring workspace.</p></div><span class="badge">{{ $members->count() }} users</span></header><div class="table-wrap"><table class="user-management-table"><thead><tr><th>Name</th><th>Email</th><th>Access role</th><th>Actions</th></tr></thead><tbody>
         @foreach ($members as $member)
             @php($memberRole = $member->pivot->role->value)
-            <tr><td>{{ $member->name }}</td><td>{{ $member->email }}</td><td>
+            <tr class="user-member-row"><td data-label="Name">{{ $member->name }}</td><td data-label="Email">{{ $member->email }}</td><td data-label="Access role">
                 @if ($memberRole !== 'owner' && $permissions->canUpdateMember)
                     <form method="post" action="{{ route('teams.members.update', ['team' => $team->slug, 'user' => $member->id]) }}" class="inline-form user-role-form">@csrf @method('patch')<select name="role" aria-label="Role for {{ $member->name }}">@foreach ($availableRoles as $role)<option value="{{ $role['value'] }}" @selected($memberRole === $role['value'])>{{ $role['label'] }}</option>@endforeach</select><button class="button secondary small" type="submit">Save</button></form>
                 @else <span class="badge">{{ ucfirst($memberRole) }}</span> @endif
-            </td><td>
+            </td><td data-label="Actions">
                 @if ($memberRole !== 'owner' && $permissions->canRemoveMember)
                     <form method="post" action="{{ route('teams.members.destroy', ['team' => $team->slug, 'user' => $member->id]) }}" onsubmit="return confirm('Remove {{ addslashes($member->name) }} from this workspace?')">@csrf @method('delete')<button class="button danger small" type="submit">Revoke access</button></form>
                 @else <span class="muted">—</span> @endif

@@ -60,11 +60,11 @@
                 <tbody>
                     @forelse ($recentIncidents as $incident)
                         <tr class="incident-row">
-                            <td><strong>{{ $incident->incident_code }}</strong></td>
-                            <td><time datetime="{{ $incident->occurred_at->toIso8601String() }}">{{ $incident->occurred_at->format('M j, Y') }}<small>{{ $incident->occurred_at->format('g:i A') }}</small></time></td>
-                            <td>{{ $incident->incident_type }}</td>
-                            <td><span @class(['incident-status', 'incident-review' => $incident->status === 'needs_review', 'incident-confirmed' => $incident->status === 'confirmed', 'incident-resolved' => $incident->status === 'resolved'])>{{ ucfirst(str_replace('_', ' ', $incident->status)) }}</span></td>
-                            <td>{{ $incident->evidence_path ? 'Attached' : '—' }}</td>
+                            <td data-label="Incident ID"><strong>{{ $incident->incident_code }}</strong></td>
+                            <td data-label="Date &amp; time"><time datetime="{{ $incident->occurred_at->toIso8601String() }}">{{ $incident->occurred_at->format('M j, Y') }}<small>{{ $incident->occurred_at->format('g:i A') }}</small></time></td>
+                            <td data-label="Incident type">{{ $incident->incident_type }}</td>
+                            <td data-label="Status"><span @class(['incident-status', 'incident-review' => $incident->status === 'needs_review', 'incident-confirmed' => $incident->status === 'confirmed', 'incident-resolved' => $incident->status === 'resolved'])>{{ ucfirst(str_replace('_', ' ', $incident->status)) }}</span></td>
+                            <td data-label="Evidence">{{ $incident->evidence_path ? 'Attached' : '—' }}</td>
                         </tr>
                     @empty
                         <tr><td colspan="5"><div class="dashboard-empty"><span class="empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4.5h14v15H5zM8 8h8M8 11.5h8M8 15h5"/></svg></span><strong>No incident records yet</strong><span>Incident reports for this crossing will appear here.</span></div></td></tr>

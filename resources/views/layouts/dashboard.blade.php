@@ -58,6 +58,9 @@
         <main class="dashboard-main">
             <header class="dashboard-topbar">
                 <div class="monitoring-location">
+                    <a class="mobile-topbar-brand" href="{{ route('home') }}" aria-label="TOMECO CrossGuard home">
+                        <span>TOMECO</span><strong><em>Cross</em>Guard</strong>
+                    </a>
                     <span>Monitoring location</span>
                     <strong>{{ auth()->user()->currentTeam?->name ?? 'Location not set' }}</strong>
                 </div>

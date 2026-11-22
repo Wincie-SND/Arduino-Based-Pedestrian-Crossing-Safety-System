@@ -479,6 +479,200 @@ html.dark .reports-table-panel, html.dark .report-summary, html.dark .summary-se
 html.dark .report-table th, html.dark .report-table td { border-color: #d4d6d7; }
 html.dark .incident-id-link { color: #19232d; }
 
+/* Phone layout: compact header, bottom navigation, and card-style records. */
+.mobile-topbar-brand { display: none; }
+
+@media (max-width: 720px) {
+    .dashboard-sidebar {
+        position: fixed;
+        z-index: 30;
+        inset: auto 0 0;
+        display: block;
+        min-height: 0;
+        padding: 0 8px calc(5px + env(safe-area-inset-bottom));
+        border-top: 1px solid #28283d;
+        box-shadow: 0 -8px 24px #0002;
+    }
+    .dashboard-brand, .sidebar-divider, .sidebar-label, .sidebar-footer { display: none; }
+    .dashboard-nav { display: flex; justify-content: space-around; gap: 2px; }
+    .dashboard-nav-link {
+        min-width: 0;
+        min-height: 62px;
+        flex: 1 1 0;
+        flex-direction: column;
+        justify-content: center;
+        gap: 4px;
+        padding: 5px 2px;
+        border-radius: 7px;
+        color: #c7c7d3;
+        font-size: .62rem;
+        letter-spacing: 0;
+        text-align: center;
+        text-transform: none;
+    }
+    .dashboard-nav-link.active { background: #ffffff18; }
+    .dashboard-nav-link svg { width: 18px; height: 18px; flex-basis: 18px; }
+    .dashboard-nav-link span { max-width: 100%; overflow: visible; line-height: 1.1; text-align: center; text-overflow: clip; white-space: normal; }
+    .dashboard-topbar { position: sticky; z-index: 20; top: 0; min-height: 76px; align-items: center; padding: 9px 16px; }
+    .monitoring-location { min-width: 0; }
+    .monitoring-location span { margin-bottom: 2px; font-size: .56rem; }
+    .monitoring-location strong { max-width: min(52vw, 260px); overflow: hidden; font-size: .77rem; text-overflow: ellipsis; white-space: nowrap; }
+    .mobile-topbar-brand { display: inline-flex; align-items: baseline; gap: .22rem; margin-bottom: 3px; color: #08152a; font-size: .83rem; font-weight: 850; letter-spacing: -.035em; line-height: 1; text-decoration: none; }
+    .mobile-topbar-brand strong { font-weight: inherit; }
+    .mobile-topbar-brand em { color: #d2b400; font-style: normal; }
+    .dashboard-account { flex: 0 0 auto; }
+    .account-name, .notification-mark, .account-divider { display: none; }
+    .dashboard-content { padding: 19px 16px calc(94px + env(safe-area-inset-bottom)); }
+    .panel-heading h2 { font-size: .9rem; }
+    .panel-heading p { font-size: .7rem; }
+    .metric-card-top { font-size: .7rem; }
+    .metric-note { font-size: .68rem; }
+    .device-list li { font-size: .75rem; }
+    .device-status { font-size: .65rem; }
+    .panel-footnote { font-size: .65rem; }
+    .recent-notification strong { font-size: .75rem; }
+    .recent-notification div > span { font-size: .68rem; }
+    .recent-notification small { font-size: .64rem; }
+    .settings-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+    .settings-nav { display: flex; flex-wrap: nowrap; gap: 6px; overflow-x: auto; margin: 0 -2px; padding: 2px; scrollbar-width: none; }
+    .settings-nav::-webkit-scrollbar { display: none; }
+    .settings-nav a { flex: 0 0 auto; min-height: 42px; display: inline-flex; align-items: center; padding: 0 13px; border: 1px solid #d5dade; background: #f7f7f7; font-size: .82rem; }
+    .settings-nav a.active { border-color: #0a3046; background: #0a3046; color: #fff; }
+    .settings-panel .button, .user-invite-form > .button { min-height: 44px; }
+    .reports-heading { align-items: flex-start; }
+    .report-search, .filter-select { min-height: 44px; }
+    .filter-select select, .report-search input { min-height: 42px; font-size: .82rem; }
+    .filter-apply { min-height: 44px; padding: 0 15px; font-size: .75rem; }
+    .summary-segment { min-height: 64px; font-size: .7rem; }
+    .report-table-wrap, .dashboard-table-wrap { overflow: visible; }
+    .report-table, .dashboard-table { display: block; width: 100%; min-width: 0; }
+    .report-table thead, .dashboard-table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        clip-path: inset(50%);
+    }
+    .report-table tbody, .dashboard-table tbody { display: grid; gap: 10px; }
+    .report-table tbody tr.clickable-incident-row, .dashboard-table tbody tr.incident-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0 12px;
+        padding: 7px 12px;
+        border: 1px solid #d5d8da;
+        border-radius: 9px;
+        background: #fff;
+        box-shadow: 0 2px 5px #0000000b;
+    }
+    .report-table tbody tr.clickable-incident-row:hover td { background: transparent; }
+    .report-table tbody tr.clickable-incident-row td, .dashboard-table .incident-row td {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        padding: 8px 2px;
+        border: 0;
+        color: #34414a;
+        font-size: .78rem;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+        white-space: normal;
+    }
+    .report-table tbody tr.clickable-incident-row td::before, .dashboard-table .incident-row td::before {
+        color: #747d83;
+        content: attr(data-label);
+        font-size: .65rem;
+        font-weight: 750;
+        letter-spacing: .045em;
+        line-height: 1.2;
+        text-transform: uppercase;
+    }
+    .report-table tbody tr.clickable-incident-row td:first-child, .report-table tbody tr.clickable-incident-row td:nth-child(3), .dashboard-table .incident-row td:first-child { grid-column: 1 / -1; }
+    .report-table tbody tr.clickable-incident-row td:first-child { border-bottom: 1px solid #e5e8e9; }
+    .report-table tbody tr.clickable-incident-row td:first-child .incident-id-link { font-size: .92rem; }
+    .report-table tbody tr.clickable-incident-row td { font-size: .82rem; }
+    .report-status, .incident-status { font-size: .68rem; }
+    .report-table tbody tr.clickable-incident-row td:nth-child(7) { grid-column: 1 / -1; align-items: flex-end; padding-top: 2px; }
+    .report-table tbody tr.clickable-incident-row td:nth-child(7)::before { display: none; }
+    .report-table td time, .dashboard-table .incident-row td time { white-space: normal; }
+    .report-table td time small, .dashboard-table .incident-row td time small { margin-top: 1px; }
+    .details-action { width: 44px; height: 40px; }
+    .report-table tbody tr.report-empty-row { display: block; border: 0; background: transparent; }
+    .report-table tbody tr.report-empty-row td { display: block; padding: 0; border: 0; }
+    .report-table tbody tr.report-empty-row td::before { content: none; }
+    .dashboard-table tbody tr:not(.incident-row) { display: block; }
+    .dashboard-table tbody tr:not(.incident-row) td { display: block; padding: 0; }
+    .dashboard-table tbody tr:not(.incident-row) td::before { content: none; }
+    .user-management-panel { padding: 14px; }
+    .user-invite-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+    .user-invite-form .field { margin: 0; }
+    .user-invite-form .button { width: 100%; }
+    .user-management-table { display: block; width: 100%; min-width: 0; }
+    .user-management-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); clip-path: inset(50%); }
+    .user-management-table tbody { display: grid; gap: 10px; }
+    .user-management-table .user-member-row { display: grid; grid-template-columns: minmax(0, 1fr); padding: 7px 12px; border: 1px solid #d5d8da; border-radius: 9px; background: #fff; }
+    .user-management-table .user-member-row td { display: grid; grid-template-columns: minmax(90px, .7fr) minmax(0, 1.3fr); align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px solid #edf0f1; font-size: .78rem; overflow-wrap: anywhere; }
+    .user-management-table .user-member-row td:last-child { border-bottom: 0; }
+    .user-management-table .user-member-row td::before { color: #747d83; content: attr(data-label); font-size: .62rem; font-weight: 750; letter-spacing: .035em; text-transform: uppercase; }
+    .user-role-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; width: 100%; gap: 6px; }
+    .user-role-form select, .user-role-form .button, .user-management-table .button { min-height: 40px; }
+    .user-management-table .user-member-row td:last-child > form { width: 100%; }
+    .user-management-table .user-member-row td:last-child .button { width: 100%; }
+    .incident-detail-grid { grid-template-columns: minmax(0, 1fr); }
+    .incident-right-stack { grid-template-columns: minmax(0, 1fr); }
+    .evidence-preview { min-height: clamp(180px, 58vw, 300px); }
+    .evidence-metadata { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .evidence-metadata > div:last-child { grid-column: 1 / -1; }
+    .evidence-metadata small { font-size: .62rem; }
+    .evidence-metadata strong { font-size: .68rem; }
+    .evidence-metadata strong { overflow-wrap: anywhere; white-space: normal; }
+    .incident-review-form textarea { min-height: 130px; font-size: 1rem; }
+    .incident-review-form > label { font-size: .75rem; }
+    .human-review-note strong { font-size: .66rem; }
+    .human-review-note small { font-size: .62rem; }
+    .incident-timeline strong { font-size: .72rem; }
+    .incident-timeline p, .incident-timeline small, .history-empty, .reviewed-by { font-size: .66rem; }
+    .review-actions { align-items: stretch; flex-direction: column; }
+    .review-actions > div { display: grid; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .review-action { min-height: 44px; justify-content: center; font-size: .72rem; }
+    .incident-info-list > div { display: grid; grid-template-columns: minmax(100px, .8fr) minmax(0, 1.2fr); align-items: start; gap: 10px; font-size: .75rem; }
+    .incident-info-list dd { max-width: none; overflow-wrap: anywhere; }
+    .login-shell { min-height: 100svh; }
+    .login-brand-panel { min-height: 0; gap: 18px; padding: 22px 20px 20px; }
+    .crossguard-brand { font-size: 1.15rem; }
+    .login-message { margin: 0; padding: 8px 0; }
+    .login-message h1 { font-size: clamp(1.5rem, 7vw, 2rem); }
+    .login-message p { margin-top: 10px; font-size: .82rem; }
+    .monitor-site { padding: 8px 10px; }
+    .monitor-site strong { font-size: .75rem; }
+    .login-form-panel { min-height: 0; align-items: flex-start; padding: 28px 20px 36px; }
+    .login-form header { margin-bottom: 1.5rem; }
+    .login-form .field input { min-height: 48px; font-size: 1rem; }
+    .login-actions .button { min-height: 48px; }
+}
+
+@media (max-width: 420px) {
+    .dashboard-topbar { padding-right: 12px; padding-left: 12px; }
+    .monitoring-location strong { max-width: 47vw; font-size: .72rem; }
+    .dashboard-account { gap: 7px; }
+    .dashboard-logout button { min-height: 38px; padding: .35rem .5rem; }
+    .dashboard-content { padding-right: 12px; padding-left: 12px; }
+    .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+    .metric-card { min-height: 112px; padding: 12px 11px; }
+    .metric-card-top { align-items: flex-start; font-size: .68rem; }
+    .metric-value { font-size: 1.45rem; }
+    .metric-note { font-size: .6rem; white-space: normal; }
+    .dashboard-panel, .reports-table-panel { padding: 12px; }
+    .summary-segment { grid-template-columns: 9px minmax(0, 1fr) auto; gap: 6px; padding: 0 7px; font-size: .65rem; }
+    .summary-dot { width: 8px; height: 8px; }
+    .summary-segment strong { font-size: .78rem; }
+    .report-filters { gap: 8px; }
+    .review-actions > div { grid-template-columns: minmax(0, 1fr); }
+}
+
 @media (max-width: 1120px) {
     .report-filters { grid-template-columns: minmax(180px, 1.3fr) repeat(2, minmax(140px, 1fr)); }
     .filter-actions { grid-column: 1 / -1; justify-content: flex-end; }

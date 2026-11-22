@@ -83,22 +83,22 @@
                 <tbody>
                     @forelse ($incidents as $incident)
                         <tr class="clickable-incident-row" data-detail-url="{{ route('violations.show', ['current_team' => $currentTeam->slug, 'incident' => $incident->id]) }}" tabindex="0" aria-label="Open incident {{ $incident->incident_code }}">
-                            <td><a class="incident-id-link" href="{{ route('violations.show', ['current_team' => $currentTeam->slug, 'incident' => $incident->id]) }}">{{ $incident->incident_code }}</a></td>
-                            <td><time datetime="{{ $incident->occurred_at->toIso8601String() }}">{{ $incident->occurred_at->format('M j, Y') }}<small>{{ $incident->occurred_at->format('g:i A') }}</small></time></td>
-                            <td>{{ $incident->incident_type }}</td>
-                            <td>
+                            <td data-label="Incident ID"><a class="incident-id-link" href="{{ route('violations.show', ['current_team' => $currentTeam->slug, 'incident' => $incident->id]) }}">{{ $incident->incident_code }}</a></td>
+                            <td data-label="Date &amp; time"><time datetime="{{ $incident->occurred_at->toIso8601String() }}">{{ $incident->occurred_at->format('M j, Y') }}<small>{{ $incident->occurred_at->format('g:i A') }}</small></time></td>
+                            <td data-label="Incident type">{{ $incident->incident_type }}</td>
+                            <td data-label="Evidence">
                                 @if ($incident->evidence_path)
                                     <a class="evidence-link" href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($incident->evidence_path) }}" target="_blank" rel="noopener">View evidence</a>
                                 @else
                                     <span class="table-muted">Not attached</span>
                                 @endif
                             </td>
-                            <td><span @class(['report-status', 'status-pending' => $incident->status === 'needs_review', 'status-verified' => $incident->status === 'verified', 'status-resolved' => $incident->status === 'resolved', 'status-rejected' => $incident->status === 'rejected'])>{{ $statusLabels[$incident->status] ?? ucfirst(str_replace('_', ' ', $incident->status)) }}</span></td>
-                            <td>{{ $incident->assignedEnforcer?->name ?? 'Unassigned' }}</td>
-                            <td><a class="details-action" href="{{ route('violations.show', ['current_team' => $currentTeam->slug, 'incident' => $incident->id]) }}" aria-label="Open {{ $incident->incident_code }} details"><span aria-hidden="true">•••</span></a></td>
+                            <td data-label="Verification status"><span @class(['report-status', 'status-pending' => $incident->status === 'needs_review', 'status-verified' => $incident->status === 'verified', 'status-resolved' => $incident->status === 'resolved', 'status-rejected' => $incident->status === 'rejected'])>{{ $statusLabels[$incident->status] ?? ucfirst(str_replace('_', ' ', $incident->status)) }}</span></td>
+                            <td data-label="Assigned enforcer">{{ $incident->assignedEnforcer?->name ?? 'Unassigned' }}</td>
+                            <td data-label="Details"><a class="details-action" href="{{ route('violations.show', ['current_team' => $currentTeam->slug, 'incident' => $incident->id]) }}" aria-label="Open {{ $incident->incident_code }} details"><span aria-hidden="true">•••</span></a></td>
                         </tr>
                     @empty
-                        <tr><td colspan="7"><div class="report-empty"><span class="empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4.5h14v15H5zM8 8h8M8 11.5h8M8 15h5"/></svg></span><strong>No violation reports found</strong><span>Try changing your filters, or wait for a crossing incident to be recorded.</span></div></td></tr>
+                        <tr class="report-empty-row"><td colspan="7"><div class="report-empty"><span class="empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4.5h14v15H5zM8 8h8M8 11.5h8M8 15h5"/></svg></span><strong>No violation reports found</strong><span>Try changing your filters, or wait for a crossing incident to be recorded.</span></div></td></tr>
                     @endforelse
                 </tbody>
             </table>
