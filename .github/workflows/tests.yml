@@ -25,10 +25,20 @@ jobs:
         with:
           php-version: '8.3'
           tools: composer:v2
+          extensions: pdo_sqlite, sqlite3
           coverage: none
+
+      - name: Prepare temporary SQLite database
+        run: touch database/database.sqlite
 
       - name: Setup Application
         run: composer setup
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite
+          SESSION_DRIVER: file
+          CACHE_STORE: file
+          QUEUE_CONNECTION: sync
 
       - name: Run CI Checks
         run: composer ci:check
