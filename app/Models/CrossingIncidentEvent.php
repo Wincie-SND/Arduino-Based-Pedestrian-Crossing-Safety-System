@@ -26,11 +26,13 @@ class CrossingIncidentEvent extends Model
         return ['occurred_at' => 'datetime'];
     }
 
+    /** @return BelongsTo<CrossingIncident, $this> */
     public function incident(): BelongsTo
     {
         return $this->belongsTo(CrossingIncident::class, 'crossing_incident_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
