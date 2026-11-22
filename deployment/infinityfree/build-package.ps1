@@ -11,7 +11,7 @@ try {
     robocopy $source $stage /E /MT:32 /R:1 /W:1 /NFL /NDL /NJH /NJS /NP `
         /XD .git .github .codex .vscode node_modules tests deployment bootstrap\cache `
             storage database\seeders `
-        /XF .env .env.example .env.backup .env.production
+        /XF .env .env.example .env.backup .env.production example.txt
     if ($LASTEXITCODE -ge 8) {
         throw "Project copy failed with robocopy exit code $LASTEXITCODE."
     }
@@ -68,6 +68,12 @@ try {
     if ($oversizedPhp) {
         $oversizedPhp | Select-Object FullName, Length | Format-Table -AutoSize
         throw 'The release contains a PHP file larger than the InfinityFree upload limit.'
+    }
+
+    $emptyFiles = @(Get-ChildItem -LiteralPath $stage -Recurse -File | Where-Object Length -eq 0)
+    if ($emptyFiles.Count -gt 0) {
+        $emptyFiles | Select-Object FullName | Format-Table -AutoSize
+        throw 'The release contains zero-byte files, which the FTPS deploy action cannot upload reliably.'
     }
 
     if (Test-Path -LiteralPath $zipPath) {
