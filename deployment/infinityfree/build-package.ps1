@@ -4,9 +4,6 @@ $source = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $releaseRoot = $PSScriptRoot
 $stage = Join-Path $env:TEMP ('crossguard-infinityfree-' + [guid]::NewGuid().ToString('N'))
 $zipPath = Join-Path $releaseRoot 'CrossGuard-InfinityFree.zip'
-$composer = (Get-Command composer -ErrorAction Stop).Source
-$php = (Get-Command php -ErrorAction Stop).Source
-
 New-Item -ItemType Directory -Path $stage | Out-Null
 Write-Host "Preparing release files in $stage"
 
@@ -41,11 +38,11 @@ try {
         $composerJson | ConvertTo-Json -Depth 100 | Set-Content 'composer.json' -Encoding utf8NoBOM
 
         Write-Host 'Installing production dependencies.'
-        & $composer install --no-dev --no-interaction --prefer-dist --no-progress --no-scripts
+        composer install --no-dev --no-interaction --prefer-dist --no-progress --no-scripts
         if ($LASTEXITCODE -ne 0) { throw "Composer install failed with exit code $LASTEXITCODE." }
 
         Write-Host 'Generating Laravel package manifest.'
-        & $php artisan package:discover --ansi
+        php artisan package:discover --ansi
         if ($LASTEXITCODE -ne 0) { throw "Laravel package discovery failed with exit code $LASTEXITCODE." }
 
         $seedersPath = Join-Path $stage 'database\seeders'
