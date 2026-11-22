@@ -1,15 +1,15 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ViolationReportController;
 use App\Http\Controllers\Teams\TeamInvitationController;
+use App\Http\Controllers\ViolationReportController;
 use App\Http\Middleware\EnsureTeamMembership;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     $user = request()->user();
 
-    if (! $user) {
+    if ($user === null) {
         return to_route('login');
     }
 

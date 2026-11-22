@@ -9,6 +9,7 @@ use App\Http\Middleware\EnsureTeamMembership;
 /* @chisel-password-confirmation */
 use Illuminate\Auth\Middleware\RequirePassword;
 /* @end-chisel-password-confirmation */
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->group(function () {
@@ -32,7 +33,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('user-password.update');
 
     Route::get('settings/appearance', fn () => view('settings.appearance'))->name('appearance.edit');
-    Route::post('settings/appearance', function (\Illuminate\Http\Request $request) {
+    Route::post('settings/appearance', function (Request $request) {
         $appearance = $request->validate(['appearance' => ['required', 'in:light,dark,system']])['appearance'];
 
         return back()->withCookie(cookie('appearance', $appearance, 60 * 24 * 365))->with('toast', __('Appearance updated.'));

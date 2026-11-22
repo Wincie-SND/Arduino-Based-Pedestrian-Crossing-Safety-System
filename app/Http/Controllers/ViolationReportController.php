@@ -153,8 +153,8 @@ class ViolationReportController extends Controller
     }
 
     /** @param Builder<CrossingIncident> $query
-     *  @param array{search: string, date: string, type: string, status: string} $filters
-     *  @return Builder<CrossingIncident>
+     * @param  array{search: string, date: string, type: string, status: string}  $filters
+     * @return Builder<CrossingIncident>
      */
     private function applyFilters(Builder $query, array $filters): Builder
     {
