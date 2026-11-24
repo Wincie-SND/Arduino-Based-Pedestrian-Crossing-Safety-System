@@ -63,11 +63,11 @@
                     @error('remarks')<p class="field-error">{{ $message }}</p>@enderror
                     <div class="review-actions">
                         <div>
-                            <button class="review-action verify-action" type="submit" name="decision" value="verify"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.2 4.2L19 7"/></svg>Verify incident</button>
+                            <button class="review-action verify-action" type="submit" name="decision" value="verify" @disabled($incident->status !== 'needs_review')><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.2 4.2L19 7"/></svg>{{ in_array($incident->status, ['verified', 'resolved'], true) ? 'Verified' : 'Verify incident' }}</button>
                             <button class="review-action reject-action" type="submit" name="decision" value="reject"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg>Reject</button>
                         </div>
                         <div>
-                            <button class="review-action neutral-action" type="submit" name="decision" value="resolve"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.2 4.2L19 7"/></svg>Mark as resolved</button>
+                            <button class="review-action resolve-action" type="submit" name="decision" value="resolve" @disabled($incident->status !== 'verified')><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.2 4.2L19 7"/></svg>{{ $incident->status === 'resolved' ? 'Resolved' : 'Mark as resolved' }}</button>
                             <button class="review-action neutral-action" type="submit" name="decision" value="save_remarks"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l3 3v13H4V4zM8 4v5h8V4M8 20v-7h8v7"/></svg>Save remarks</button>
                         </div>
                     </div>

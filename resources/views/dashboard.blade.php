@@ -2,7 +2,7 @@
 @section('title', 'Dashboard')
 @section('content')
 @php
-    $firstName = explode(' ', trim(auth()->user()->name))[0] ?? auth()->user()->name;
+    $firstName = explode(' ', trim(auth()->user()->name))[0] ??          auth()->user()->name;
     $systemStatusLabel = match ($systemStatus) {
         'online' => 'Online',
         'attention' => 'Needs attention',
@@ -42,8 +42,8 @@
         <span class="metric-note">Reports submitted by personnel</span>
     </article>
     <article class="metric-card metric-card-status">
-        <div class="metric-card-top"><span>System status</span><span @class(['status-dot', 'status-online-dot' => $systemStatus === 'online', 'status-attention-dot' => $systemStatus === 'attention', 'status-offline-dot' => $systemStatus === 'not_connected']) aria-hidden="true"></span></div>
-        <strong @class(['status-awaiting', 'status-online' => $systemStatus === 'online', 'status-attention' => $systemStatus === 'attention', 'status-offline' => $systemStatus === 'not_connected'])>{{ $systemStatusLabel }}</strong>
+        <div class="metric-card-top"><span>System status</span><span id="system-status-dot" @class(['status-dot', 'status-online-dot' => $systemStatus === 'online', 'status-attention-dot' => $systemStatus === 'attention', 'status-offline-dot' => $systemStatus === 'not_connected']) aria-hidden="true"></span></div>
+        <strong id="system-status-label" @class(['status-awaiting', 'status-online' => $systemStatus === 'online', 'status-attention' => $systemStatus === 'attention', 'status-offline' => $systemStatus === 'not_connected'])>{{ $systemStatusLabel }}</strong>
         <span class="metric-note">Based on registered device status</span>
     </article>
 </section>
@@ -79,15 +79,15 @@
             <header class="panel-heading"><div><h2>Device &amp; sensor status</h2><p>Crossing hardware connection</p></div></header>
             <ul class="device-list">
                 @forelse ($devices as $device)
-                    <li>
+                    <li data-device-id="{{ $device->id }}">
                         <span>{{ $device->name }}</span>
-                        <span @class(['device-status', 'device-online' => $device->status === 'online', 'device-warning' => $device->status === 'warning', 'device-offline' => $device->status === 'offline', 'device-unknown' => ! in_array($device->status, ['online', 'warning', 'offline'], true)])>{{ match ($device->status) { 'online' => 'Online', 'warning' => 'Check', 'offline' => 'Offline', default => 'Unknown' } }}</span>
+                        <span data-device-status @class(['device-status', 'device-online' => $device->connection_status === 'online', 'device-warning' => $device->connection_status === 'warning', 'device-offline' => $device->connection_status === 'offline', 'device-unknown' => ! in_array($device->connection_status, ['online', 'warning', 'offline'], true)])>{{ match ($device->connection_status) { 'online' => 'Online', 'warning' => 'Check', 'offline' => 'Offline', default => 'Unknown' } }}</span>
                     </li>
                 @empty
                     <li class="device-empty">No devices registered for this crossing.</li>
                 @endforelse
             </ul>
-            <p class="panel-footnote">Device states are based on the latest saved status.</p>
+            <p class="panel-footnote">Board and reported sensor status refresh every 2 seconds. Camera and LED status need their own hardware feedback.</p>
         </article>
 
         <article class="dashboard-panel notifications-panel">
@@ -108,6 +108,68 @@
         </article>
     </div>
 </section>
+
+@push('scripts')
+<script>
+    (() => {
+        const endpoint = @json(route('dashboard.device-status', ['current_team' => $currentTeam->slug]));
+        const labels = { online: 'Online', warning: 'Check', offline: 'Offline', unknown: 'Unknown' };
+        const deviceClasses = ['device-online', 'device-warning', 'device-offline', 'device-unknown'];
+        const systemClasses = ['status-online', 'status-attention', 'status-offline'];
+        const dotClasses = ['status-online-dot', 'status-attention-dot', 'status-offline-dot'];
+
+        async function refreshDeviceStatuses() {
+            if (document.visibilityState !== 'visible') return;
+
+            try {
+                const response = await fetch(endpoint, {
+                    headers: { Accept: 'application/json' },
+                    cache: 'no-store',
+                    credentials: 'same-origin',
+                });
+
+                if (!response.ok) return;
+
+                const snapshot = await response.json();
+
+                for (const device of snapshot.devices ?? []) {
+                    const row = document.querySelector(`[data-device-id="${device.id}"]`);
+                    const badge = row?.querySelector('[data-device-status]');
+                    if (!badge) continue;
+
+                    const status = Object.hasOwn(labels, device.status) ? device.status : 'unknown';
+                    badge.classList.remove(...deviceClasses);
+                    badge.classList.add(`device-${status}`);
+                    badge.textContent = labels[status];
+                }
+
+                const systemStatus = ['online', 'attention', 'not_connected'].includes(snapshot.system_status)
+                    ? snapshot.system_status
+                    : 'not_connected';
+                const statusLabel = document.getElementById('system-status-label');
+                const statusDot = document.getElementById('system-status-dot');
+
+                if (statusLabel) {
+                    statusLabel.classList.remove(...systemClasses);
+                    statusLabel.classList.add(systemStatus === 'not_connected' ? 'status-offline' : `status-${systemStatus}`);
+                    statusLabel.textContent = systemStatus === 'not_connected'
+                        ? 'Not connected'
+                        : systemStatus === 'attention' ? 'Needs attention' : 'Online';
+                }
+
+                if (statusDot) {
+                    statusDot.classList.remove(...dotClasses);
+                    statusDot.classList.add(systemStatus === 'not_connected' ? 'status-offline-dot' : `status-${systemStatus}-dot`);
+                }
+            } catch {
+                // Keep the last rendered status if a temporary request fails.
+            }
+        }
+
+        window.setInterval(refreshDeviceStatuses, 500);
+    })();
+</script>
+@endpush
 
 @if ($pendingInvitations->isNotEmpty())
     <section class="dashboard-panel invitation-panel">

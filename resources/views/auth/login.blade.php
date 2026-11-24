@@ -30,11 +30,6 @@
                 @if (session('status'))<div class="notice">{{ session('status') }}</div>@endif
                 @if ($errors->any())<div class="notice error" role="alert">{{ $errors->first() }}</div>@endif
 
-                @if ($canUsePasskey)
-                    <button class="button secondary" id="passkey-login" type="button" style="width:100%;margin-bottom:1.25rem">Sign in with a passkey</button>
-                    <p id="passkey-login-error" class="field-error" hidden></p>
-                @endif
-
                 <form method="post" action="{{ route('login.store') }}">
                     @csrf
                     @if ($teamInvitation)<input type="hidden" name="invitation" value="{{ $teamInvitation['code'] }}">@endif
@@ -57,23 +52,4 @@
         </section>
     </div>
 </main>
-@if ($canUsePasskey)
-    <script type="module">
-        import { Passkeys } from '/js/passkeys/index.js';
-        const button = document.getElementById('passkey-login');
-        const error = document.getElementById('passkey-login-error');
-        button.addEventListener('click', async () => {
-            button.disabled = true;
-            error.hidden = true;
-            try {
-                const result = await Passkeys.verify({ routes: { options: @json(route('passkey.login-options')), submit: @json(route('passkey.login')) } });
-                if (result?.redirect) window.location.assign(result.redirect);
-                else window.location.reload();
-            } catch (exception) {
-                error.textContent = exception instanceof Error ? exception.message : 'Passkey sign-in failed.';
-                error.hidden = false;
-            } finally { button.disabled = false; }
-        });
-    </script>
-@endif
 @endsection

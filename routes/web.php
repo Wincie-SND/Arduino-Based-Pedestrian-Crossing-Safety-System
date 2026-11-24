@@ -23,6 +23,7 @@ Route::get('/', function () {
 Route::prefix('{current_team}')
     ->middleware(['auth', 'verified', EnsureTeamMembership::class])
     ->group(function () {
+        Route::get('dashboard/device-status', [DashboardController::class, 'deviceStatuses'])->name('dashboard.device-status');
         Route::get('dashboard', DashboardController::class)->name('dashboard');
         Route::get('violations', [ViolationReportController::class, 'index'])->name('violations.index');
         Route::get('violations/export', [ViolationReportController::class, 'export'])->name('violations.export');

@@ -1,7 +1,0 @@
-RewriteEngine On
-
-# Laravel's public disk cannot use a symlink on InfinityFree.
-RewriteRule ^storage/(.*)$ /storage/app/public/$1 [END]
-
-# Serve the Laravel application from its public directory.
-RewriteRule (.*) /public/$1 [L]

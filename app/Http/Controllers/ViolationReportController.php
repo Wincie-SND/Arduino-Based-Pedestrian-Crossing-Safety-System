@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ViolationReportController extends Controller
@@ -75,6 +76,19 @@ class ViolationReportController extends Controller
 
         DB::transaction(function () use ($request, $team, $incident, $decision, $remarks, $eventTitles): void {
             $record = $team->incidents()->lockForUpdate()->findOrFail($incident);
+
+            if ($decision === 'verify' && $record->status !== 'needs_review') {
+                throw ValidationException::withMessages([
+                    'decision' => 'Only pending incidents can be verified.',
+                ]);
+            }
+
+            if ($decision === 'resolve' && $record->status !== 'verified') {
+                throw ValidationException::withMessages([
+                    'decision' => 'Verify the incident before marking it resolved.',
+                ]);
+            }
+
             $record->review_remarks = $remarks !== '' ? $remarks : null;
 
             if ($decision !== 'save_remarks') {

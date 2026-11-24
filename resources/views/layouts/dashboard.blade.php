@@ -84,5 +84,10 @@
         </main>
     </div>
     @stack('scripts')
+    <script>
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted) window.location.reload();
+        });
+    </script>
 </body>
 </html>

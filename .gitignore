@@ -7,8 +7,7 @@
 /resources/js/routes
 /resources/js/wayfinder
 /vendor
-/deployment/infinityfree/CrossGuard-InfinityFree.zip
-/deployment/infinityfree/initial-owner.sql
+/arduino/CrossGuardController/secrets.h
 .DS_Store
 .env
 .env.backup

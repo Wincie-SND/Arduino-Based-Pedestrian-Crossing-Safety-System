@@ -1,4 +1,4 @@
-name: CrossGuard checks and deployment
+name: CrossGuard checks
 
 on:
   push:
@@ -43,69 +43,3 @@ jobs:
       - name: Run CI Checks
         run: composer ci:check
 
-  deploy:
-    name: Deploy to InfinityFree
-    needs: ci
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    runs-on: windows-latest
-
-    steps:
-      - name: Check out source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Set up PHP and Composer
-        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
-        with:
-          php-version: '8.3'
-          tools: composer:v2
-          extensions: fileinfo
-          coverage: none
-
-      - name: Check deployment secrets
-        shell: pwsh
-        env:
-          FTP_SERVER: ${{ secrets.INFINITYFREE_FTP_SERVER }}
-          FTP_USERNAME: ${{ secrets.INFINITYFREE_FTP_USERNAME }}
-          FTP_PASSWORD: ${{ secrets.INFINITYFREE_FTP_PASSWORD }}
-        run: |
-          $required = @('FTP_SERVER', 'FTP_USERNAME', 'FTP_PASSWORD')
-          foreach ($name in $required) {
-            if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name))) {
-              throw "Missing GitHub Actions secret: INFINITYFREE_$name"
-            }
-          }
-
-      - name: Build the production package
-        shell: pwsh
-        run: ./deployment/infinityfree/build-package.ps1
-
-      - name: Unpack files for upload
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Path publish -Force | Out-Null
-          Expand-Archive -LiteralPath deployment/infinityfree/CrossGuard-InfinityFree.zip -DestinationPath publish -Force
-          if (-not (Test-Path -LiteralPath 'publish/public/index.php')) {
-            throw 'The production package is missing public/index.php.'
-          }
-
-      - name: Upload changed files to InfinityFree
-        uses: SamKirkland/FTP-Deploy-Action@110f9186c050f71550953127052e77650219c287 # v4.4.0
-        with:
-          server: ${{ secrets.INFINITYFREE_FTP_SERVER }}
-          username: ${{ secrets.INFINITYFREE_FTP_USERNAME }}
-          password: ${{ secrets.INFINITYFREE_FTP_PASSWORD }}
-          protocol: ftps
-          port: 21
-          local-dir: publish/
-          server-dir: tomeco.freedev.app/htdocs/
-          timeout: 120000
-          dangerous-clean-slate: false
-          exclude: |
-            **/.env
-            **/.env.*
-            **/storage/**
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
