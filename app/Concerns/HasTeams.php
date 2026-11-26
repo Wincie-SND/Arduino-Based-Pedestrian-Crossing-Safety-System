@@ -43,7 +43,7 @@ trait HasTeams
             'id',
             'id',
             'team_id',
-        )->where('team_members.role', TeamRole::Owner->value);
+        )->where('team_members.role', TeamRole::Admin->value);
     }
 
     /**
@@ -79,16 +79,18 @@ trait HasTeams
     /**
      * Switch to the given team.
      */
-    public function switchTeam(Team $team): bool
+    public function switchTeam(?Team $team): bool
     {
-        if (! $this->belongsToTeam($team)) {
+        if ($team !== null && ! $this->belongsToTeam($team)) {
             return false;
         }
 
-        $this->update(['current_team_id' => $team->id]);
+        $this->update(['current_team_id' => $team?->id]);
         $this->setRelation('currentTeam', $team);
 
-        URL::defaults(['current_team' => $team->slug]);
+        if ($team !== null) {
+            URL::defaults(['current_team' => $team->slug]);
+        }
 
         return true;
     }
@@ -114,7 +116,7 @@ trait HasTeams
      */
     public function ownsTeam(Team $team): bool
     {
-        return $this->teamRole($team) === TeamRole::Owner;
+        return $this->teamRole($team) === TeamRole::Admin;
     }
 
     /**
@@ -173,8 +175,6 @@ trait HasTeams
             canAddMember: $role?->hasPermission(TeamPermission::AddMember) ?? false,
             canUpdateMember: $role?->hasPermission(TeamPermission::UpdateMember) ?? false,
             canRemoveMember: $role?->hasPermission(TeamPermission::RemoveMember) ?? false,
-            canCreateInvitation: $role?->hasPermission(TeamPermission::CreateInvitation) ?? false,
-            canCancelInvitation: $role?->hasPermission(TeamPermission::CancelInvitation) ?? false,
         );
     }
 

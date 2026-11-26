@@ -12,16 +12,9 @@
 
 <section class="dashboard-intro" aria-labelledby="dashboard-title">
     <div>
-        <div class="dashboard-eyebrow-row">
-            <p class="eyebrow">Operations overview</p>
-            @if (app()->environment(['local', 'testing']))<span class="demo-badge">Demo data</span>@endif
-        </div>
+        <p class="eyebrow">Operations overview</p>
         <h1 id="dashboard-title">Good day, {{ $firstName }}</h1>
         <p class="dashboard-summary">Here’s what’s happening at the monitored crossing today.</p>
-    </div>
-    <div class="date-chip" aria-label="Current date">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M7.5 3.5v3M16.5 3.5v3M3.5 9.5h17"/></svg>
-        <span><small>Today</small><strong>{{ now()->format('M j, Y') }}</strong></span>
     </div>
 </section>
 
@@ -44,7 +37,7 @@
     <article class="metric-card metric-card-status">
         <div class="metric-card-top"><span>System status</span><span id="system-status-dot" @class(['status-dot', 'status-online-dot' => $systemStatus === 'online', 'status-attention-dot' => $systemStatus === 'attention', 'status-offline-dot' => $systemStatus === 'not_connected']) aria-hidden="true"></span></div>
         <strong id="system-status-label" @class(['status-awaiting', 'status-online' => $systemStatus === 'online', 'status-attention' => $systemStatus === 'attention', 'status-offline' => $systemStatus === 'not_connected'])>{{ $systemStatusLabel }}</strong>
-        <span class="metric-note">Based on registered device status</span>
+        <span class="metric-note">Based on registered hardware status</span>
     </article>
 </section>
 
@@ -59,9 +52,10 @@
                 <thead><tr><th scope="col">Incident ID</th><th scope="col">Date &amp; time</th><th scope="col">Incident type</th><th scope="col">Status</th><th scope="col">Evidence</th></tr></thead>
                 <tbody>
                     @forelse ($recentIncidents as $incident)
+                        @php($occurredAt = $incident->occurred_at->copy()->setTimezone(config()->string('app.display_timezone')))
                         <tr class="incident-row">
                             <td data-label="Incident ID"><strong>{{ $incident->incident_code }}</strong></td>
-                            <td data-label="Date &amp; time"><time datetime="{{ $incident->occurred_at->toIso8601String() }}">{{ $incident->occurred_at->format('M j, Y') }}<small>{{ $incident->occurred_at->format('g:i A') }}</small></time></td>
+                            <td data-label="Date &amp; time"><time datetime="{{ $occurredAt->toIso8601String() }}">{{ $occurredAt->format('M j, Y') }}<small>{{ $occurredAt->format('g:i A') }}</small></time></td>
                             <td data-label="Incident type">{{ $incident->incident_type }}</td>
                             <td data-label="Status"><span @class(['incident-status', 'incident-review' => $incident->status === 'needs_review', 'incident-confirmed' => $incident->status === 'confirmed', 'incident-resolved' => $incident->status === 'resolved'])>{{ ucfirst(str_replace('_', ' ', $incident->status)) }}</span></td>
                             <td data-label="Evidence">{{ $incident->evidence_path ? 'Attached' : '—' }}</td>
@@ -75,6 +69,21 @@
     </article>
 
     <div class="dashboard-side-stack">
+        <article class="dashboard-panel camera-panel" aria-labelledby="crossing-camera-title" data-crossing-camera data-incidents-url="{{ route('dashboard.camera.incidents', ['current_team' => $currentTeam->slug], false) }}">
+            <header class="panel-heading camera-heading">
+                <h2 id="crossing-camera-title">Camera module</h2>
+                <button class="button small camera-toggle" type="button" data-camera-toggle disabled>Start camera</button>
+            </header>
+            <div class="camera-preview">
+                <div class="camera-placeholder" data-camera-placeholder aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M4 7.5h3l1.5-2h7l1.5 2h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+                </div>
+                <video aria-label="Live crossing camera" data-camera-video autoplay muted playsinline hidden></video>
+            </div>
+            <p class="camera-status" data-camera-status role="status">Camera is off.</p>
+            <p class="panel-footnote camera-footnote">Point this device’s camera at the crossing and keep this tab visible to save incident snapshots.</p>
+        </article>
+
         <article class="dashboard-panel device-panel">
             <header class="panel-heading"><div><h2>Device &amp; sensor status</h2><p>Crossing hardware connection</p></div></header>
             <ul class="device-list">
@@ -84,16 +93,20 @@
                         <span data-device-status @class(['device-status', 'device-online' => $device->connection_status === 'online', 'device-warning' => $device->connection_status === 'warning', 'device-offline' => $device->connection_status === 'offline', 'device-unknown' => ! in_array($device->connection_status, ['online', 'warning', 'offline'], true)])>{{ match ($device->connection_status) { 'online' => 'Online', 'warning' => 'Check', 'offline' => 'Offline', default => 'Unknown' } }}</span>
                     </li>
                 @empty
-                    <li class="device-empty">No devices registered for this crossing.</li>
+                    <li class="device-empty">No crossing hardware registered.</li>
                 @endforelse
+                <li>
+                    <span>Camera module</span>
+                    <span class="device-status device-offline" data-camera-device-status>Offline</span>
+                </li>
             </ul>
-            <p class="panel-footnote">Board and reported sensor status refresh every 2 seconds. Camera and LED status need their own hardware feedback.</p>
+            <p class="panel-footnote">Camera status reflects the live preview in this browser.</p>
         </article>
 
         <article class="dashboard-panel notifications-panel">
-            <header class="panel-heading"><div><h2>Recent notifications</h2><p>System and crossing updates</p></div><span class="panel-link" aria-disabled="true">View all</span></header>
+            <header class="panel-heading"><div><h2>Recent notifications</h2><p>System and crossing updates</p></div><a class="panel-link" href="{{ route('notifications.index', ['current_team' => $currentTeam->slug]) }}">View all</a></header>
             <div class="recent-notification-list">
-                @forelse ($recentNotifications as $notification)
+                @forelse ($headerNotifications->take(4) as $notification)
                     <div class="recent-notification">
                         <span @class(['notification-indicator', 'notification-alert' => $notification->level === 'alert', 'notification-warning' => $notification->level === 'warning', 'notification-info' => $notification->level === 'info']) aria-hidden="true"></span>
                         <div><strong>{{ $notification->title }}</strong><span>{{ $notification->message }}</span><small>{{ $notification->occurred_at->diffForHumans() }}</small></div>
@@ -110,6 +123,7 @@
 </section>
 
 @push('scripts')
+<script src="{{ asset('js/crossing-camera.js') }}?v={{ filemtime(public_path('js/crossing-camera.js')) }}" defer></script>
 <script>
     (() => {
         const endpoint = @json(route('dashboard.device-status', ['current_team' => $currentTeam->slug]));
@@ -171,18 +185,4 @@
 </script>
 @endpush
 
-@if ($pendingInvitations->isNotEmpty())
-    <section class="dashboard-panel invitation-panel">
-        <header class="panel-heading"><div><h2>Pending team invitations</h2><p>Accept an invitation to join an authorized monitoring team.</p></div></header>
-        @foreach ($pendingInvitations as $invitation)
-            <div class="invitation-row">
-                <div><strong>{{ $invitation['team']['name'] }}</strong><span>Invited by {{ $invitation['inviterName'] }}</span></div>
-                <div class="invitation-actions">
-                    <form method="post" action="{{ route('invitations.accept', ['invitation' => $invitation['code']]) }}">@csrf<button class="button small" type="submit">Accept</button></form>
-                    <form method="post" action="{{ route('invitations.decline', ['invitation' => $invitation['code']]) }}">@csrf @method('delete')<button class="button secondary small" type="submit">Decline</button></form>
-                </div>
-            </div>
-        @endforeach
-    </section>
-@endif
 @endsection

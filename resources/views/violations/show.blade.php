@@ -2,6 +2,8 @@
 @section('title', 'Incident '.$incident->incident_code)
 @section('content')
 @php
+    $displayTimezone = config()->string('app.display_timezone');
+    $occurredAt = $incident->occurred_at->copy()->setTimezone($displayTimezone);
     $statusLabel = match ($incident->status) {
         'needs_review' => 'Pending verification',
         'verified' => 'Verified',
@@ -20,7 +22,7 @@
             </a>
             <p class="eyebrow">Incident record</p>
             <h1>{{ $incident->incident_code }}</h1>
-            <p class="incident-subtitle">Potential violation captured on {{ $incident->occurred_at->format('F j, Y') }} at {{ $incident->occurred_at->format('g:i:s A') }}.</p>
+            <p class="incident-subtitle">Potential violation captured on {{ $occurredAt->format('F j, Y') }} at {{ $occurredAt->format('g:i:s A') }}.</p>
         </div>
         <span @class(['report-status incident-heading-status', 'status-pending' => $incident->status === 'needs_review', 'status-verified' => $incident->status === 'verified', 'status-resolved' => $incident->status === 'resolved', 'status-rejected' => $incident->status === 'rejected'])>{{ $statusLabel }}</span>
     </section>
@@ -32,8 +34,8 @@
                     <div><h2>Incident evidence</h2><p>{{ $incident->evidence_source ? 'Evidence source: '.$incident->evidence_source : 'Evidence provided with this incident' }}</p></div>
                 </header>
                 @if ($incident->evidence_path)
-                    @php($evidenceUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($incident->evidence_path))
-                    <a class="evidence-preview" href="{{ $evidenceUrl }}" target="_blank" rel="noopener">
+                    @php($evidenceUrl = route('violations.evidence', ['current_team' => $currentTeam->slug, 'incident' => $incident->id]))
+                    <a class="evidence-preview" href="{{ $evidenceUrl }}" data-evidence-open="{{ $incident->incident_code }}" aria-haspopup="dialog" aria-controls="evidence-viewer" aria-label="Enlarge evidence for incident {{ $incident->incident_code }}">
                         <img src="{{ $evidenceUrl }}" alt="Evidence for incident {{ $incident->incident_code }}">
                     </a>
                 @else
@@ -44,7 +46,7 @@
                     </div>
                 @endif
                 <div class="evidence-metadata">
-                    <div><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M7.5 3.5v3M16.5 3.5v3M3.5 9.5h17"/></svg><span><small>Detection time</small><strong>{{ $incident->occurred_at->format('M j, Y | g:i:s A') }}</strong></span></div>
+                    <div><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M7.5 3.5v3M16.5 3.5v3M3.5 9.5h17"/></svg><span><small>Detection time</small><strong>{{ $occurredAt->format('M j, Y | g:i:s A') }}</strong></span></div>
                     <div><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2.2"/></svg><span><small>Monitoring location</small><strong>{{ $currentTeam->name }}</strong></span></div>
                     <div><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h3l1.5-2h7l1.5 2h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span><small>Evidence source</small><strong>{{ $incident->evidence_source ?: 'Not recorded' }}</strong></span></div>
                 </div>
@@ -98,7 +100,7 @@
                         @foreach ($incident->events as $event)
                             <li>
                                 <span class="timeline-dot" aria-hidden="true"></span>
-                                <div><strong>{{ $event->title }}</strong>@if ($event->description)<p>{{ $event->description }}</p>@endif<small>{{ $event->user?->name ?? 'System' }} · {{ $event->occurred_at->format('F j, Y | g:i A') }}</small></div>
+                                <div><strong>{{ $event->title }}</strong>@if ($event->description)<p>{{ $event->description }}</p>@endif<small>{{ $event->user?->name ?? 'System' }} · {{ $event->occurred_at->copy()->setTimezone($displayTimezone)->format('F j, Y | g:i A') }}</small></div>
                             </li>
                         @endforeach
                     </ol>
@@ -106,10 +108,13 @@
                     <p class="history-empty">No review activity has been recorded yet.</p>
                 @endif
                 @if ($incident->reviewed_at)
-                    <p class="reviewed-by">Last reviewed by {{ $incident->reviewer?->name ?? 'an authorized user' }} on {{ $incident->reviewed_at->format('M j, Y | g:i A') }}.</p>
+                    <p class="reviewed-by">Last reviewed by {{ $incident->reviewer?->name ?? 'an authorized user' }} on {{ $incident->reviewed_at->copy()->setTimezone($displayTimezone)->format('M j, Y | g:i A') }}.</p>
                 @endif
             </article>
         </div>
     </section>
 </div>
+@if ($incident->evidence_path)
+    @include('violations.partials.evidence-viewer')
+@endif
 @endsection

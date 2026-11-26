@@ -16,10 +16,11 @@ class CrossingDeviceApiController extends Controller
     {
         $validated = $request->validate([
             'status' => ['sometimes', 'in:online,warning'],
-            'components' => ['sometimes', 'array:ultrasonic,infrared,buzzer'],
+            'components' => ['sometimes', 'array:ultrasonic,infrared,buzzer,leds'],
             'components.ultrasonic' => ['sometimes', 'in:online,warning'],
             'components.infrared' => ['sometimes', 'in:online,warning'],
             'components.buzzer' => ['sometimes', 'in:online,warning'],
+            'components.leds' => ['sometimes', 'in:online,warning'],
         ]);
 
         $device = $this->deviceFrom($request);
@@ -42,6 +43,7 @@ class CrossingDeviceApiController extends Controller
             'ultrasonic' => 'Ultrasonic sensor',
             'infrared' => 'Infrared sensor',
             'buzzer' => 'Buzzer',
+            'leds' => 'LED warning lights',
         ];
 
         foreach ($validated['components'] ?? [] as $component => $status) {
@@ -86,7 +88,7 @@ class CrossingDeviceApiController extends Controller
         $eventCode = strtoupper(substr(hash('sha256', $validated['event_id']), 0, 20));
         $incidentCode = "CG-{$deviceCode}-{$eventCode}";
         $occurredAt = isset($validated['occurred_at'])
-            ? Carbon::parse($validated['occurred_at'])
+            ? Carbon::parse($validated['occurred_at'], 'UTC')->utc()
             : now();
 
         $incident = CrossingIncident::query()->firstOrCreate(
@@ -103,7 +105,7 @@ class CrossingDeviceApiController extends Controller
                 'vehicle_status' => $validated['vehicle_status'] ?? 'Not recorded',
                 'device_status' => 'online',
                 'alert_transmission_status' => 'Received by CrossGuard',
-                'evidence_source' => 'Arduino sensors',
+                'evidence_source' => CrossingIncident::ARDUINO_EVIDENCE_SOURCE,
                 'event_description' => $validated['event_description'] ?? 'A potential crossing conflict was detected by the Arduino controller.',
             ],
         );

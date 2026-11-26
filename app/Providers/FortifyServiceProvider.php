@@ -2,34 +2,23 @@
 
 namespace App\Providers;
 
-/* @chisel-registration */
-use App\Actions\Fortify\CreateNewUser;
-/* @end-chisel-registration */
 use App\Actions\Fortify\ResetUserPassword;
 use App\Http\Responses\LoginResponse;
 /* @chisel-passkeys */
 use App\Http\Responses\PasskeyLoginResponse;
 /* @end-chisel-passkeys */
-/* @chisel-registration */
-use App\Http\Responses\RegisterResponse;
-/* @end-chisel-registration */
 /* @chisel-2fa */
 use App\Http\Responses\TwoFactorLoginResponse;
 /* @end-chisel-2fa */
 /* @chisel-email-verification */
 use App\Http\Responses\VerifyEmailResponse;
 /* @end-chisel-email-verification */
-use App\Models\TeamInvitation;
-use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
-/* @chisel-registration */
-use Laravel\Fortify\Contracts\RegisterResponse as RegisterResponseContract;
-/* @end-chisel-registration */
 /* @chisel-2fa */
 use Laravel\Fortify\Contracts\TwoFactorLoginResponse as TwoFactorLoginResponseContract;
 /* @end-chisel-2fa */
@@ -54,9 +43,6 @@ class FortifyServiceProvider extends ServiceProvider
         /* @chisel-passkeys */
         $this->app->singleton(PasskeyLoginResponseContract::class, PasskeyLoginResponse::class);
         /* @end-chisel-passkeys */
-        /* @chisel-registration */
-        $this->app->singleton(RegisterResponseContract::class, RegisterResponse::class);
-        /* @end-chisel-registration */
         /* @chisel-2fa */
         $this->app->singleton(TwoFactorLoginResponseContract::class, TwoFactorLoginResponse::class);
         /* @end-chisel-2fa */
@@ -81,9 +67,6 @@ class FortifyServiceProvider extends ServiceProvider
     private function configureActions(): void
     {
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
-        /* @chisel-registration */
-        Fortify::createUsersUsing(CreateNewUser::class);
-        /* @end-chisel-registration */
     }
 
     /**
@@ -94,7 +77,6 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::loginView(fn (Request $request) => view('auth.login', [
             'canResetPassword' => Features::enabled(Features::resetPasswords()),
             'status' => $request->session()->get('status'),
-            'teamInvitation' => $this->teamInvitation($request),
         ]));
 
         Fortify::resetPasswordView(fn (Request $request) => view('auth.reset-password', [
@@ -111,12 +93,6 @@ class FortifyServiceProvider extends ServiceProvider
             'status' => $request->session()->get('status'),
         ]));
         /* @end-chisel-email-verification */
-
-        /* @chisel-registration */
-        Fortify::registerView(fn (Request $request) => view('auth.register', [
-            'teamInvitation' => $this->teamInvitation($request),
-        ]));
-        /* @end-chisel-registration */
 
         /* @chisel-2fa */
         Fortify::twoFactorChallengeView(fn () => view('auth.two-factor-challenge'));
@@ -153,41 +129,5 @@ class FortifyServiceProvider extends ServiceProvider
             );
         });
         /* @end-chisel-passkeys */
-    }
-
-    /**
-     * Get the pending team invitation context for auth pages.
-     *
-     * @return array{code: string, teamName: string, email: string, canRegister: bool}|null
-     */
-    private function teamInvitation(Request $request): ?array
-    {
-        $invitationCode = $request->query('invitation');
-
-        if (! is_string($invitationCode)) {
-            return null;
-        }
-
-        $invitation = TeamInvitation::query()
-            ->with('team')
-            ->where('code', $invitationCode)
-            ->whereNull('accepted_at')
-            ->where(fn ($query) => $query
-                ->whereNull('expires_at')
-                ->orWhere('expires_at', '>=', now()))
-            ->first();
-
-        if (! $invitation) {
-            return null;
-        }
-
-        return [
-            'code' => $invitation->code,
-            'teamName' => $invitation->team->name,
-            'email' => $invitation->email,
-            'canRegister' => ! User::query()
-                ->whereRaw('LOWER(email) = ?', [Str::lower($invitation->email)])
-                ->exists(),
-        ];
     }
 }

@@ -39,13 +39,13 @@ class DashboardDemoSeeder extends Seeder
                     'name' => 'CrossGuard Administrator',
                     'email' => 'admin@crossguard.test',
                     'password' => 'CrossGuardAdmin123!',
-                    'role' => TeamRole::Owner,
+                    'role' => TeamRole::Admin,
                 ],
                 [
                     'name' => 'Crossing Officer',
                     'email' => 'officer@crossguard.test',
                     'password' => 'CrossGuardOfficer123!',
-                    'role' => TeamRole::Member,
+                    'role' => TeamRole::Enforcer,
                 ],
             ];
 

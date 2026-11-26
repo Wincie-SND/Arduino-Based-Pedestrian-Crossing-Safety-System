@@ -33,13 +33,11 @@ class SecurityTest extends TestCase
             ->withSession(['auth.password_confirmed_at' => time()])
             /* @end-chisel-password-confirmation */
             ->get(route('security.edit'))
+            ->assertOk()
             ->assertViewIs('settings.security')
-            /* @chisel-passkeys */
-            ->assertViewHas('canManagePasskeys', true)
-            ->assertViewHas('passkeys', [])
-            /* @end-chisel-passkeys */
-            ->assertViewHas('canManageTwoFactor', true)
-            ->assertViewHas('twoFactorEnabled', false);
+            ->assertSee('Update password')
+            ->assertDontSee('Two-factor authentication')
+            ->assertDontSee('Passkeys');
     }
 
     /* @chisel-password-confirmation */
@@ -61,10 +59,8 @@ class SecurityTest extends TestCase
     }
     /* @end-chisel-password-confirmation */
 
-    public function test_security_page_renders_without_two_factor_when_feature_is_disabled()
+    public function test_security_page_renders_when_sign_in_features_are_disabled()
     {
-        $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
-
         config(['fortify.features' => []]);
 
         $user = User::factory()->create();
@@ -76,13 +72,7 @@ class SecurityTest extends TestCase
             ->get(route('security.edit'))
             ->assertOk()
             ->assertViewIs('settings.security')
-            /* @chisel-passkeys */
-            ->assertViewHas('canManagePasskeys', false)
-            ->assertViewHas('passkeys', [])
-            /* @end-chisel-passkeys */
-            ->assertViewHas('canManageTwoFactor', false)
-            ->assertViewMissing('twoFactorEnabled')
-            ->assertViewMissing('requiresConfirmation');
+            ->assertSee('Update password');
     }
 
     public function test_password_can_be_updated()

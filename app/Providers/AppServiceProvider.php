@@ -2,11 +2,13 @@
 
 namespace App\Providers;
 
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\View\View;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,6 +26,19 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        view()->composer('layouts.dashboard', function (View $view): void {
+            $user = request()->user();
+            if (! $user instanceof User || ($team = $user->currentTeam) === null) {
+                $view->with('accountRole', null);
+
+                return;
+            }
+
+            $view->with('accountRole', $user->teamRole($team));
+            $view->with('headerNotifications', $view->getData()['headerNotifications']
+                ?? $team->notifications()->latest('occurred_at')->orderByDesc('id')->limit(5)->get());
+        });
     }
 
     /**

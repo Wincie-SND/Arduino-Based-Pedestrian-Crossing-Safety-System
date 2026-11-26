@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 class CreateTeam
 {
     /**
-     * Create a new team and add the user as owner.
+     * Create a new team and add the user as its Admin.
      */
     public function handle(User $user, string $name, bool $isPersonal = false): Team
     {
@@ -22,7 +22,7 @@ class CreateTeam
 
             $membership = $team->memberships()->create([
                 'user_id' => $user->id,
-                'role' => TeamRole::Owner,
+                'role' => TeamRole::Admin,
             ]);
 
             $user->switchTeam($team);

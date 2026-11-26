@@ -17,24 +17,24 @@ class PruneExpiredTeamInvitationsTest extends TestCase
     {
         $this->travelTo(now()->startOfDay());
 
-        $owner = User::factory()->create();
+        $admin = User::factory()->create();
         $team = Team::factory()->create();
 
-        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
+        $team->members()->attach($admin, ['role' => TeamRole::Admin->value]);
 
         $expiredInvitation = TeamInvitation::factory()->expired()->create([
             'team_id' => $team->id,
-            'invited_by' => $owner->id,
+            'invited_by' => $admin->id,
         ]);
 
         $unexpiredInvitation = TeamInvitation::factory()->expiresIn(1)->create([
             'team_id' => $team->id,
-            'invited_by' => $owner->id,
+            'invited_by' => $admin->id,
         ]);
 
         $invitationWithoutExpiration = TeamInvitation::factory()->create([
             'team_id' => $team->id,
-            'invited_by' => $owner->id,
+            'invited_by' => $admin->id,
         ]);
 
         $this->artisan('schedule:run')->assertSuccessful();

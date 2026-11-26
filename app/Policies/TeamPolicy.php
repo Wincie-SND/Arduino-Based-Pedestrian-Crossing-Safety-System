@@ -29,7 +29,7 @@ class TeamPolicy
      */
     public function create(User $user): bool
     {
-        return true;
+        return $user->ownedTeams()->exists();
     }
 
     /**
@@ -72,22 +72,6 @@ class TeamPolicy
     public function removeMember(User $user, Team $team): bool
     {
         return $user->hasTeamPermission($team, TeamPermission::RemoveMember);
-    }
-
-    /**
-     * Determine whether the user can invite members to the team.
-     */
-    public function inviteMember(User $user, Team $team): bool
-    {
-        return $user->hasTeamPermission($team, TeamPermission::CreateInvitation);
-    }
-
-    /**
-     * Determine whether the user can cancel invitations.
-     */
-    public function cancelInvitation(User $user, Team $team): bool
-    {
-        return $user->hasTeamPermission($team, TeamPermission::CancelInvitation);
     }
 
     /**

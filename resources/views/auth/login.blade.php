@@ -7,22 +7,20 @@
     <div class="login-shell">
         <section class="login-brand-panel">
             <a class="crossguard-brand" href="{{ route('home') }}" aria-label="TOMECO CrossGuard home">
-                TOMECO<strong><em>Cross</em> Guard</strong>
+                <img class="login-brand-logo" src="{{ asset('pictures/tomecologo.png') }}" alt="" width="56" height="56">
+                <span>TOMECO<strong><em>Cross</em> Guard</strong></span>
             </a>
             <div class="login-message">
                 <h1>Safer crossings.<br>Smarter enforcement.</h1>
                 <p>Real-time pedestrian crossing monitoring and evidence-based incident management for authorized TOMECO personnel.</p>
             </div>
             <div class="monitor-site">
-                <span class="pin" aria-hidden="true">⌖</span>
+                <img class="monitor-site-pin" src="{{ asset('pictures/locationpin.png') }}" alt="" width="24" height="24">
                 <div><small>Designated monitoring site</small><strong>LNU Youngfield Pedestrian Crossing</strong></div>
             </div>
         </section>
         <section class="login-form-panel">
             <div class="login-form">
-                @if ($teamInvitation)
-                    <div class="notice">Sign in to join the {{ $teamInvitation['teamName'] }} team.</div>
-                @endif
                 <header>
                     <h2>Welcome back</h2>
                     <p>Sign in to access CrossGuard operations dashboard.</p>
@@ -32,7 +30,6 @@
 
                 <form method="post" action="{{ route('login.store') }}">
                     @csrf
-                    @if ($teamInvitation)<input type="hidden" name="invitation" value="{{ $teamInvitation['code'] }}">@endif
                     <div class="field">
                         <label for="email">Email address</label>
                         <input id="email" type="email" name="email" value="{{ old('email') }}" required autofocus autocomplete="username" placeholder="email@example.com">

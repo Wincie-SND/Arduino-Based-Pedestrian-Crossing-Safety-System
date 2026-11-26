@@ -20,6 +20,12 @@ class TeamInvitation extends Notification implements ShouldQueue
         //
     }
 
+    // Keep old queued notifications readable after retiring invitation delivery.
+    public function shouldSend(object $notifiable, string $channel): bool
+    {
+        return false;
+    }
+
     /**
      * Get the notification's delivery channels.
      *

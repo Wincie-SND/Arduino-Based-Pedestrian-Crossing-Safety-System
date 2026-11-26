@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', config('app.name', 'CrossGuard')) · TOMECO CrossGuard</title>
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="{{ asset('favicon.ico') }}?v={{ filemtime(public_path('favicon.ico')) }}" type="image/x-icon" sizes="16x16 32x32 48x48 64x64">
     <link rel="stylesheet" href="/css/app.css">
     <script>
         (() => {
@@ -25,7 +25,6 @@
                 @endif
                 <a href="{{ route('profile.edit') }}" @class(['active' => request()->routeIs('profile.*')])>Profile</a>
                 <a href="{{ route('security.edit') }}" @class(['active' => request()->routeIs('security.edit')])>Security</a>
-                <a href="{{ route('appearance.edit') }}" @class(['active' => request()->routeIs('appearance.edit')])>Appearance</a>
             </nav>
             <div class="app-user">
                 <span>{{ auth()->user()->name }}</span>
@@ -34,7 +33,6 @@
         @else
             <nav class="app-nav" aria-label="Account navigation">
                 <a href="{{ route('login') }}">Log in</a>
-                @if (Route::has('register'))<a href="{{ route('register') }}">Sign up</a>@endif
             </nav>
         @endauth
     </header>

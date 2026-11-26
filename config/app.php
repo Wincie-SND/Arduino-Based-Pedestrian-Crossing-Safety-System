@@ -67,6 +67,9 @@ return [
 
     'timezone' => 'UTC',
 
+    // Keep stored timestamps in UTC and use this timezone for local dates and times.
+    'display_timezone' => 'Asia/Manila',
+
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration

@@ -82,13 +82,14 @@
                 <thead><tr><th scope="col">Incident ID</th><th scope="col">Date &amp; time</th><th scope="col">Incident type</th><th scope="col">Evidence</th><th scope="col">Verification status</th><th scope="col">Assigned enforcer</th><th scope="col">Details</th></tr></thead>
                 <tbody>
                     @forelse ($incidents as $incident)
+                        @php($occurredAt = $incident->occurred_at->copy()->setTimezone(config()->string('app.display_timezone')))
                         <tr class="clickable-incident-row" data-detail-url="{{ route('violations.show', ['current_team' => $currentTeam->slug, 'incident' => $incident->id]) }}" tabindex="0" aria-label="Open incident {{ $incident->incident_code }}">
                             <td data-label="Incident ID"><a class="incident-id-link" href="{{ route('violations.show', ['current_team' => $currentTeam->slug, 'incident' => $incident->id]) }}">{{ $incident->incident_code }}</a></td>
-                            <td data-label="Date &amp; time"><time datetime="{{ $incident->occurred_at->toIso8601String() }}">{{ $incident->occurred_at->format('M j, Y') }}<small>{{ $incident->occurred_at->format('g:i A') }}</small></time></td>
+                            <td data-label="Date &amp; time"><time datetime="{{ $occurredAt->toIso8601String() }}">{{ $occurredAt->format('M j, Y') }}<small>{{ $occurredAt->format('g:i A') }}</small></time></td>
                             <td data-label="Incident type">{{ $incident->incident_type }}</td>
                             <td data-label="Evidence">
                                 @if ($incident->evidence_path)
-                                    <a class="evidence-link" href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($incident->evidence_path) }}" target="_blank" rel="noopener">View evidence</a>
+                                    <a class="evidence-link" href="{{ route('violations.evidence', ['current_team' => $currentTeam->slug, 'incident' => $incident->id]) }}" data-evidence-open="{{ $incident->incident_code }}" aria-haspopup="dialog" aria-controls="evidence-viewer" aria-label="View evidence for incident {{ $incident->incident_code }}">View evidence</a>
                                 @else
                                     <span class="table-muted">Not attached</span>
                                 @endif
@@ -118,6 +119,7 @@
         </footer>
     </section>
 </div>
+@include('violations.partials.evidence-viewer')
 @endsection
 @push('scripts')
 <script>

@@ -35,12 +35,22 @@ use Illuminate\Support\Carbon;
 #[Fillable(['team_id', 'incident_code', 'incident_type', 'status', 'evidence_path', 'occurred_at', 'detection_method', 'pedestrian_status', 'vehicle_status', 'device_status', 'alert_transmission_status', 'evidence_source', 'event_description', 'assigned_enforcer_id', 'reviewed_by', 'reviewed_at', 'review_remarks'])]
 class CrossingIncident extends Model
 {
+    public const ARDUINO_EVIDENCE_SOURCE = 'Arduino sensors';
+
+    public const CAMERA_EVIDENCE_DIRECTORY = 'camera-evidence';
+
     protected function casts(): array
     {
         return [
             'occurred_at' => 'datetime',
             'reviewed_at' => 'datetime',
         ];
+    }
+
+    public function hasCameraEvidence(): bool
+    {
+        return $this->evidence_path !== null
+            && str_starts_with($this->evidence_path, self::CAMERA_EVIDENCE_DIRECTORY.'/');
     }
 
     /** @return BelongsTo<Team, $this> */

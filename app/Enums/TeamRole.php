@@ -4,9 +4,8 @@ namespace App\Enums;
 
 enum TeamRole: string
 {
-    case Owner = 'owner';
     case Admin = 'admin';
-    case Member = 'member';
+    case Enforcer = 'enforcer';
 
     /**
      * Get the display label for the role.
@@ -24,13 +23,10 @@ enum TeamRole: string
     public function permissions(): array
     {
         return match ($this) {
-            self::Owner => TeamPermission::cases(),
-            self::Admin => [
+            self::Admin => TeamPermission::cases(),
+            self::Enforcer => [
                 TeamPermission::UpdateTeam,
-                TeamPermission::CreateInvitation,
-                TeamPermission::CancelInvitation,
             ],
-            self::Member => [],
         };
     }
 
@@ -49,9 +45,8 @@ enum TeamRole: string
     public function level(): int
     {
         return match ($this) {
-            self::Owner => 3,
-            self::Admin => 2,
-            self::Member => 1,
+            self::Admin => 3,
+            self::Enforcer => 2,
         };
     }
 
@@ -64,16 +59,12 @@ enum TeamRole: string
     }
 
     /**
-     * Get the roles that can be assigned to team members (excludes Owner).
+     * Get the roles that can be assigned through team management.
      *
-     * @return array<array{value: string, label: string}>
+     * @return list<TeamRole>
      */
     public static function assignable(): array
     {
-        return collect(self::cases())
-            ->filter(fn (self $role) => $role !== self::Owner)
-            ->map(fn (self $role) => ['value' => $role->value, 'label' => $role->label()])
-            ->values()
-            ->toArray();
+        return [self::Enforcer];
     }
 }

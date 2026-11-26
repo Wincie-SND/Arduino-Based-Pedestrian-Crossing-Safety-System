@@ -3,7 +3,6 @@ import { MapPin } from 'lucide-react';
 import type { ReactNode } from 'react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
-import TeamInvitationAlert from '@/components/team-invitation-alert';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -11,27 +10,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { home } from '@/routes';
-/* @chisel-registration */
-import { register } from '@/routes';
-/* @end-chisel-registration */
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 /* @chisel-passkeys */
 import PasskeyVerify from '@/components/passkey-verify';
 /* @end-chisel-passkeys */
-import type { TeamInvitationContext } from '@/types';
 
 type Props = {
     status?: string;
     canResetPassword: boolean;
-    teamInvitation?: TeamInvitationContext | null;
 };
 
-export default function Login({
-    status,
-    canResetPassword,
-    teamInvitation,
-}: Props) {
+export default function Login({ status, canResetPassword }: Props) {
     return (
         <>
             <Head title="Log in" />
@@ -85,15 +75,6 @@ export default function Login({
 
                     <section className="flex min-h-[600px] items-center justify-center px-6 py-14 sm:px-10 lg:px-14 xl:px-20">
                         <div className="w-full max-w-[470px]">
-                            {teamInvitation && (
-                                <div className="mb-7">
-                                    <TeamInvitationAlert
-                                        invitation={teamInvitation}
-                                        action="Log in"
-                                    />
-                                </div>
-                            )}
-
                             {/* @chisel-passkeys */}
                             <PasskeyVerify />
                             {/* @end-chisel-passkeys */}
@@ -187,7 +168,7 @@ export default function Login({
                                             </div>
                                         </div>
 
-                                        <div className="grid gap-4 sm:grid-cols-2 sm:items-center sm:gap-6">
+                                        <div>
                                             <Button
                                                 type="submit"
                                                 className="h-11 w-full rounded-md bg-[#00253e] font-semibold text-white hover:bg-[#003653]"
@@ -198,27 +179,6 @@ export default function Login({
                                                 {processing && <Spinner />}
                                                 Sign In
                                             </Button>
-
-                                            {/* @chisel-registration */}
-                                            <div className="flex items-center justify-center gap-3 text-center sm:flex-col sm:gap-1">
-                                                <span className="text-xs text-[#666]">
-                                                    Don’t have an account?
-                                                </span>
-                                                <Link
-                                                    href={register({
-                                                        query: {
-                                                            invitation:
-                                                                teamInvitation?.code,
-                                                        },
-                                                    })}
-                                                    data-test="register-link"
-                                                    tabIndex={6}
-                                                    className="inline-flex h-11 min-w-32 items-center justify-center rounded-md bg-[#00253e] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#003653] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00253e]"
-                                                >
-                                                    Sign Up
-                                                </Link>
-                                            </div>
-                                            {/* @end-chisel-registration */}
                                         </div>
                                     </>
                                 )}

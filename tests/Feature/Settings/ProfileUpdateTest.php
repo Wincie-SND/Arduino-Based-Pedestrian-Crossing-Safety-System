@@ -23,7 +23,8 @@ class ProfileUpdateTest extends TestCase
 
     public function test_profile_information_can_be_updated()
     {
-        $user = User::factory()->create();
+        $verifiedAt = now()->subDay()->startOfSecond();
+        $user = User::factory()->create(['email_verified_at' => $verifiedAt]);
 
         $response = $this
             ->actingAs($user)
@@ -40,7 +41,23 @@ class ProfileUpdateTest extends TestCase
 
         $this->assertSame('Test User', $user->name);
         $this->assertSame('test@example.com', $user->email);
+        $this->assertEquals($verifiedAt, $user->email_verified_at);
+        $this->get(route('dashboard', ['current_team' => $user->currentTeam->slug]))->assertOk();
+    }
+
+    public function test_changing_an_unverified_email_still_requires_initial_verification(): void
+    {
+        $user = User::factory()->unverified()->create();
+
+        $this->actingAs($user)->patch(route('profile.update'), [
+            'name' => $user->name,
+            'email' => 'new-address@example.com',
+        ])->assertRedirect(route('profile.edit'));
+
+        $this->assertSame('new-address@example.com', $user->refresh()->email);
         $this->assertNull($user->email_verified_at);
+        $this->get(route('dashboard', ['current_team' => $user->currentTeam->slug]))
+            ->assertRedirect(route('verification.notice'));
     }
 
     public function test_email_is_stored_in_lowercase_so_the_user_can_still_log_in()

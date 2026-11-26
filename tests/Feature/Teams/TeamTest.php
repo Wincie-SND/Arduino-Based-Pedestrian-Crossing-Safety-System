@@ -86,7 +86,7 @@ class TeamTest extends TestCase
         $user = User::factory()->create();
         $team = Team::factory()->create();
 
-        $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+        $team->members()->attach($user, ['role' => TeamRole::Admin->value]);
 
         $response = $this
             ->actingAs($user)
@@ -95,15 +95,18 @@ class TeamTest extends TestCase
         $response
             ->assertOk()
             ->assertViewIs('teams.edit')
-            ->assertViewHas('members', fn ($members) => $members->first()->pivot->role === TeamRole::Owner);
+            ->assertViewHas('members', fn ($members) => $members->first()->pivot->role === TeamRole::Admin)
+            ->assertSee('Create an Enforcer account')
+            ->assertSee(route('teams.members.store', $team))
+            ->assertDontSee('Pending invitations');
     }
 
-    public function test_teams_can_be_updated_by_owners()
+    public function test_teams_can_be_updated_by_admins()
     {
         $user = User::factory()->create();
         $team = Team::factory()->create(['name' => 'Original Name']);
 
-        $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+        $team->members()->attach($user, ['role' => TeamRole::Admin->value]);
 
         $response = $this
             ->actingAs($user)
@@ -119,17 +122,16 @@ class TeamTest extends TestCase
         ]);
     }
 
-    public function test_teams_cannot_be_updated_by_members()
+    public function test_users_cannot_update_teams_they_dont_belong_to()
     {
-        $owner = User::factory()->create();
-        $member = User::factory()->create();
+        $admin = User::factory()->create();
+        $outsider = User::factory()->create();
         $team = Team::factory()->create();
 
-        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-        $team->members()->attach($member, ['role' => TeamRole::Member->value]);
+        $team->members()->attach($admin, ['role' => TeamRole::Admin->value]);
 
         $response = $this
-            ->actingAs($member)
+            ->actingAs($outsider)
             ->patch(route('teams.update', $team), [
                 'name' => 'Updated Name',
             ]);
@@ -137,12 +139,12 @@ class TeamTest extends TestCase
         $response->assertForbidden();
     }
 
-    public function test_teams_can_be_deleted_by_owners()
+    public function test_teams_can_be_deleted_by_admins()
     {
         $user = User::factory()->create();
         $team = Team::factory()->create();
 
-        $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+        $team->members()->attach($user, ['role' => TeamRole::Admin->value]);
 
         $response = $this
             ->actingAs($user)
@@ -162,7 +164,7 @@ class TeamTest extends TestCase
         $user = User::factory()->create();
         $team = Team::factory()->create();
 
-        $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+        $team->members()->attach($user, ['role' => TeamRole::Admin->value]);
 
         $response = $this
             ->actingAs($user)
@@ -183,13 +185,13 @@ class TeamTest extends TestCase
         $user = User::factory()->create(['name' => 'Mike']);
 
         $zuluTeam = Team::factory()->create(['name' => 'Zulu Team']);
-        $zuluTeam->members()->attach($user, ['role' => TeamRole::Owner->value]);
+        $zuluTeam->members()->attach($user, ['role' => TeamRole::Admin->value]);
 
         $alphaTeam = Team::factory()->create(['name' => 'Alpha Team']);
-        $alphaTeam->members()->attach($user, ['role' => TeamRole::Owner->value]);
+        $alphaTeam->members()->attach($user, ['role' => TeamRole::Admin->value]);
 
         $betaTeam = Team::factory()->create(['name' => 'Beta Team']);
-        $betaTeam->members()->attach($user, ['role' => TeamRole::Owner->value]);
+        $betaTeam->members()->attach($user, ['role' => TeamRole::Admin->value]);
 
         $user->update(['current_team_id' => $zuluTeam->id]);
 
@@ -213,7 +215,7 @@ class TeamTest extends TestCase
         $user = User::factory()->create();
         $personalTeam = $user->personalTeam();
         $team = Team::factory()->create(['name' => 'Zulu Team']);
-        $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+        $team->members()->attach($user, ['role' => TeamRole::Admin->value]);
 
         $user->update(['current_team_id' => $team->id]);
 
@@ -237,7 +239,7 @@ class TeamTest extends TestCase
         $user = User::factory()->create();
         $personalTeam = $user->personalTeam();
         $team = Team::factory()->create();
-        $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+        $team->members()->attach($user, ['role' => TeamRole::Admin->value]);
 
         $user->update(['current_team_id' => $personalTeam->id]);
 
@@ -258,12 +260,12 @@ class TeamTest extends TestCase
 
     public function test_members_can_leave_non_personal_teams()
     {
-        $owner = User::factory()->create();
+        $admin = User::factory()->create();
         $member = User::factory()->create();
         $team = Team::factory()->create();
 
-        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-        $team->members()->attach($member, ['role' => TeamRole::Member->value]);
+        $team->members()->attach($admin, ['role' => TeamRole::Admin->value]);
+        $team->members()->attach($member, ['role' => TeamRole::Enforcer->value]);
 
         $response = $this
             ->actingAs($member)
@@ -277,18 +279,18 @@ class TeamTest extends TestCase
 
     public function test_leaving_current_team_switches_to_alphabetically_first_remaining_team()
     {
-        $owner = User::factory()->create();
+        $admin = User::factory()->create();
         $member = User::factory()->create(['name' => 'Mike']);
 
         $zuluTeam = Team::factory()->create(['name' => 'Zulu Team']);
-        $zuluTeam->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-        $zuluTeam->members()->attach($member, ['role' => TeamRole::Member->value]);
+        $zuluTeam->members()->attach($admin, ['role' => TeamRole::Admin->value]);
+        $zuluTeam->members()->attach($member, ['role' => TeamRole::Enforcer->value]);
 
         $alphaTeam = Team::factory()->create(['name' => 'Alpha Team']);
-        $alphaTeam->members()->attach($member, ['role' => TeamRole::Member->value]);
+        $alphaTeam->members()->attach($member, ['role' => TeamRole::Enforcer->value]);
 
         $betaTeam = Team::factory()->create(['name' => 'Beta Team']);
-        $betaTeam->members()->attach($member, ['role' => TeamRole::Member->value]);
+        $betaTeam->members()->attach($member, ['role' => TeamRole::Enforcer->value]);
 
         $member->update(['current_team_id' => $zuluTeam->id]);
 
@@ -316,20 +318,20 @@ class TeamTest extends TestCase
         $this->assertTrue($user->fresh()->belongsToTeam($personalTeam));
     }
 
-    public function test_team_owners_cannot_leave_their_team()
+    public function test_team_admins_cannot_leave_their_team()
     {
-        $owner = User::factory()->create();
+        $admin = User::factory()->create();
         $team = Team::factory()->create();
 
-        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
+        $team->members()->attach($admin, ['role' => TeamRole::Admin->value]);
 
         $response = $this
-            ->actingAs($owner)
+            ->actingAs($admin)
             ->delete(route('teams.leave', $team));
 
         $response->assertForbidden();
 
-        $this->assertTrue($owner->fresh()->belongsToTeam($team));
+        $this->assertTrue($admin->fresh()->belongsToTeam($team));
     }
 
     public function test_users_cannot_leave_teams_they_dont_belong_to()
@@ -346,18 +348,18 @@ class TeamTest extends TestCase
 
     public function test_deleting_team_switches_other_affected_users_to_their_personal_team()
     {
-        $owner = User::factory()->create();
+        $admin = User::factory()->create();
         $member = User::factory()->create();
 
         $team = Team::factory()->create();
-        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-        $team->members()->attach($member, ['role' => TeamRole::Member->value]);
+        $team->members()->attach($admin, ['role' => TeamRole::Admin->value]);
+        $team->members()->attach($member, ['role' => TeamRole::Enforcer->value]);
 
-        $owner->update(['current_team_id' => $team->id]);
+        $admin->update(['current_team_id' => $team->id]);
         $member->update(['current_team_id' => $team->id]);
 
         $response = $this
-            ->actingAs($owner)
+            ->actingAs($admin)
             ->delete(route('teams.destroy', $team), [
                 'name' => $team->name,
             ]);
@@ -387,14 +389,14 @@ class TeamTest extends TestCase
         ]);
     }
 
-    public function test_teams_cannot_be_deleted_by_non_owners()
+    public function test_teams_cannot_be_deleted_by_non_admins()
     {
-        $owner = User::factory()->create();
+        $admin = User::factory()->create();
         $member = User::factory()->create();
         $team = Team::factory()->create();
 
-        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-        $team->members()->attach($member, ['role' => TeamRole::Member->value]);
+        $team->members()->attach($admin, ['role' => TeamRole::Admin->value]);
+        $team->members()->attach($member, ['role' => TeamRole::Enforcer->value]);
 
         $response = $this
             ->actingAs($member)
@@ -410,7 +412,7 @@ class TeamTest extends TestCase
         $user = User::factory()->create();
         $team = Team::factory()->create();
 
-        $team->members()->attach($user, ['role' => TeamRole::Member->value]);
+        $team->members()->attach($user, ['role' => TeamRole::Enforcer->value]);
 
         $response = $this
             ->actingAs($user)

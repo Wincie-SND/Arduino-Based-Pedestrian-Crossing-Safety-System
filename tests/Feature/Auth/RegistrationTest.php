@@ -2,10 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Enums\TeamRole;
-use App\Models\Team;
 use App\Models\TeamInvitation;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -13,57 +10,21 @@ class RegistrationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_registration_screen_can_be_rendered()
+    public function test_public_registration_is_disabled_even_with_a_legacy_invitation(): void
     {
-        $response = $this->get(route('register'));
+        $invitation = TeamInvitation::factory()->create();
 
-        $response->assertOk();
-    }
-
-    public function test_registration_screen_includes_team_invitation_context()
-    {
-        $owner = User::factory()->create();
-        $team = Team::factory()->create(['name' => 'Laravel Team']);
-        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-
-        $invitation = TeamInvitation::factory()->create([
-            'team_id' => $team->id,
-            'email' => 'invited@example.com',
-            'invited_by' => $owner->id,
-        ]);
-
-        $response = $this->get(route('register', ['invitation' => $invitation->code]));
-
-        $response->assertOk();
-        $response->assertViewIs('auth.register')
-            ->assertViewHas('teamInvitation', fn ($context) => $context['code'] === $invitation->code && $context['teamName'] === 'Laravel Team');
-    }
-
-    public function test_new_users_can_register()
-    {
-        $owner = User::factory()->create();
-        $team = Team::factory()->create();
-        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-        $invitation = TeamInvitation::factory()->create([
-            'team_id' => $team->id,
-            'email' => 'test@example.com',
-            'role' => TeamRole::Member,
-            'invited_by' => $owner->id,
-        ]);
-
-        $response = $this->post(route('register.store'), [
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => 'password',
-            'password_confirmation' => 'password',
+        $this->get('/register?invitation='.$invitation->code)->assertNotFound();
+        $this->post('/register', [
+            'name' => 'Legacy invitee',
+            'email' => $invitation->email,
+            'password' => 'test-password',
+            'password_confirmation' => 'test-password',
             'invitation' => $invitation->code,
-        ]);
+        ])->assertNotFound();
 
-        $this->assertAuthenticated();
-
-        $user = User::where('email', 'test@example.com')->first();
-        $response->assertRedirect(route('dashboard'));
-        $this->assertTrue($user->belongsToTeam($team));
-        $this->assertNotNull($invitation->fresh()->accepted_at);
+        $this->assertGuest();
+        $this->assertDatabaseMissing('users', ['email' => $invitation->email]);
+        $this->assertNull($invitation->fresh()->accepted_at);
     }
 }

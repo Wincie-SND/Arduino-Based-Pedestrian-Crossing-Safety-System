@@ -15,42 +15,72 @@ constexpr unsigned long kHttpResponseTimeoutMs = 2000UL;
 constexpr unsigned long kHttpConnectionTimeoutMs = 250UL;
 constexpr unsigned long kIncidentRetryIntervalMs = 5000UL;
 constexpr unsigned long kSensorPrintIntervalMs = 250UL;
-
-// Ultrasonic sensors: vehicle approach zones 1 and 2.
-constexpr int kTrig1 = 9;
-constexpr int kEcho1 = 10;
-constexpr int kTrig2 = 7;
-constexpr int kEcho2 = 8;
-
-// IR sensors: pedestrian presence in zones 1 and 2.
-constexpr int kIr1 = 2;
-constexpr int kIr2 = 3;
+constexpr unsigned long kPedestrianAlertDurationMs = 4000UL;
 
 // A small active buzzer is the default. Set true for a passive piezo buzzer.
 constexpr int kBuzzerPin = 4;
 constexpr bool kPassiveBuzzer = false;
 constexpr unsigned int kPassiveBuzzerFrequencyHz = 2000;
+constexpr unsigned long kBuzzerBeepIntervalMs = 250UL;
 
-constexpr float kDistanceThresholdCm = 50.0F;
+constexpr unsigned long kWarningLedSlowBlinkIntervalMs = 500UL;
+constexpr unsigned long kWarningLedFastBlinkIntervalMs = 200UL;
+
+constexpr float kUltrasonic1RangeCm = 18.0F;
+constexpr float kUltrasonic2RangeCm = 20.0F;
 // Most obstacle-detection IR modules pull OUT LOW when they detect an object.
 constexpr int kIrDetectedState = LOW;
+
+struct PedestrianAlert {
+    bool previousDetection = false;
+    bool active = false;
+    unsigned long startedAt = 0;
+
+    bool update(bool detected, unsigned long now) {
+        const bool newDetection = detected && !previousDetection;
+        previousDetection = detected;
+        if (newDetection) {
+            startedAt = now;
+            active = true;
+        }
+
+        active = active && now - startedAt < kPedestrianAlertDurationMs;
+        return newDetection;
+    }
+};
+
+struct CrossingGroup {
+    int number;
+    int irPin;
+    int trigPin;
+    int echoPin;
+    int ledPin;
+    PedestrianAlert ledAlert;
+    unsigned long ledBlinkIntervalMs = kWarningLedSlowBlinkIntervalMs;
+    unsigned long ledModeStartedAt = 0;
+    bool previousConflict = false;
+    bool incidentPending = false;
+    unsigned long lastIncidentAttemptAt = 0;
+    char pendingEventId[48] = {};
+};
+
+// Group number, IR, ultrasonic TRIG, ultrasonic ECHO, and LED driver.
+CrossingGroup group1{1, 2, 9, 10, 5};
+CrossingGroup group2{2, 3, 7, 8, 6};
 
 unsigned long lastHeartbeatAt = 0;
 unsigned long lastWifiAttemptAt = 0;
 unsigned long lastWifiStatusCheckAt = 0;
-unsigned long lastIncidentAttemptAt = 0;
 unsigned long lastSensorPrintAt = 0;
 unsigned long incidentCounter = 0;
 bool wifiConnected = false;
 bool wifiAttemptStarted = false;
 bool wasConnected = false;
-bool previousPossibleConflict = false;
-bool incidentPending = false;
 bool buzzerIsOn = false;
-char pendingEventId[48] = {0};
-char pendingIncidentPayload[600] = {0};
+PedestrianAlert buzzerAlert;
 WiFiClient apiClient;
-const char* activeApiPath = nullptr;
+bool apiRequestActive = false;
+CrossingGroup* activeIncidentGroup = nullptr;
 unsigned long apiRequestStartedAt = 0;
 char apiStatusLine[64];
 size_t apiStatusLength = 0;
@@ -90,6 +120,34 @@ void setBuzzer(bool alarmOn) {
     buzzerIsOn = alarmOn;
 }
 
+void updateBuzzerAlert(bool pedestrianDetected, unsigned long now) {
+    buzzerAlert.update(pedestrianDetected, now);
+    const unsigned long elapsed = now - buzzerAlert.startedAt;
+    setBuzzer(buzzerAlert.active && (elapsed / kBuzzerBeepIntervalMs) % 2UL == 0);
+}
+
+void initializeGroupPins(const CrossingGroup& group) {
+    pinMode(group.irPin, INPUT);
+    pinMode(group.trigPin, OUTPUT);
+    pinMode(group.echoPin, INPUT);
+    digitalWrite(group.trigPin, LOW);
+    pinMode(group.ledPin, OUTPUT);
+    digitalWrite(group.ledPin, LOW);
+}
+
+void updateWarningLeds(CrossingGroup& group, bool pedestrianDetected, bool conflict, unsigned long now) {
+    const bool alertStarted = group.ledAlert.update(pedestrianDetected, now);
+    const unsigned long blinkIntervalMs = conflict ? kWarningLedFastBlinkIntervalMs : kWarningLedSlowBlinkIntervalMs;
+    if (alertStarted || blinkIntervalMs != group.ledBlinkIntervalMs) {
+        group.ledBlinkIntervalMs = blinkIntervalMs;
+        group.ledModeStartedAt = now;
+    }
+
+    const bool ledOn = group.ledAlert.active
+        && ((now - group.ledModeStartedAt) / blinkIntervalMs) % 2UL == 0;
+    digitalWrite(group.ledPin, ledOn ? HIGH : LOW);
+}
+
 void beginWifiConnection() {
     lastWifiAttemptAt = millis();
     wifiAttemptStarted = true;
@@ -117,7 +175,7 @@ float getDistance(int trigPin, int echoPin) {
     return duration * 0.0343F / 2.0F;
 }
 
-bool startPostJson(const char* path, const char* payload) {
+bool startPostJson(const char* path, const char* payload, CrossingGroup* incidentGroup) {
     apiClient.setConnectionTimeout(kHttpConnectionTimeoutMs);
     if (!apiClient.connect(API_HOST, API_PORT)) {
         apiClient.stop();
@@ -144,15 +202,17 @@ bool startPostJson(const char* path, const char* payload) {
     apiClient.println();
     apiClient.print(payload);
 
-    activeApiPath = path;
+    apiRequestActive = true;
+    activeIncidentGroup = incidentGroup;
     apiRequestStartedAt = millis();
     apiStatusLength = 0;
     return true;
 }
 
 void finishApiRequest(int responseCode) {
-    const bool wasIncident = activeApiPath == kIncidentPath;
-    activeApiPath = nullptr;
+    CrossingGroup* const incidentGroup = activeIncidentGroup;
+    apiRequestActive = false;
+    activeIncidentGroup = nullptr;
     apiClient.stop();
 
     const bool accepted = responseCode == 200 || responseCode == 201;
@@ -168,9 +228,9 @@ void finishApiRequest(int responseCode) {
         }
     }
 
-    if (wasIncident) {
+    if (incidentGroup != nullptr) {
         if (accepted) {
-            incidentPending = false;
+            incidentGroup->incidentPending = false;
             printEvent("incident_recorded");
         } else {
             printEvent("incident_retry_pending");
@@ -206,17 +266,14 @@ void pollApiResponse() {
     }
 }
 
-void startHeartbeat(float distance1, float distance2) {
-    const bool ultrasonicReady = distance1 >= 0.0F && distance2 >= 0.0F;
-    char payload[180];
-    snprintf(
-        payload,
-        sizeof(payload),
-        "{\"status\":\"online\",\"components\":{\"ultrasonic\":\"%s\",\"infrared\":\"online\",\"buzzer\":\"online\"}}",
-        ultrasonicReady ? "online" : "warning"
+void startHeartbeat() {
+    // Echo availability depends on the scene. The heartbeat reports controller availability.
+    startPostJson(
+        kHeartbeatPath,
+        "{\"status\":\"online\",\"components\":{\"ultrasonic\":\"online\","
+        "\"infrared\":\"online\",\"buzzer\":\"online\",\"leds\":\"online\"}}",
+        nullptr
     );
-
-    startPostJson(kHeartbeatPath, payload);
 }
 
 void printDistanceAndVehicle(float distance, bool vehicleDetected) {
@@ -238,11 +295,8 @@ void printSensorStatus(
     bool pedestrian2,
     bool vehicle1,
     bool vehicle2,
-    bool pedestrianDetected,
-    bool vehicleDetected,
     bool conflict1,
     bool conflict2,
-    bool possibleConflict,
     bool buzzerActive
 ) {
     Serial.print(F("US1: "));
@@ -254,58 +308,59 @@ void printSensorStatus(
     Serial.print(F(" | IR2: "));
     Serial.print(pedestrian2 ? F("pedestrian") : F("clear"));
     Serial.print(F(" | Ped: "));
-    Serial.print(pedestrianDetected ? F("YES") : F("no"));
+    Serial.print((pedestrian1 || pedestrian2) ? F("YES") : F("no"));
     Serial.print(F(" | Vehicle: "));
-    Serial.print(vehicleDetected ? F("YES") : F("no"));
-    Serial.print(F(" | Z1 conflict: "));
+    Serial.print((vehicle1 || vehicle2) ? F("YES") : F("no"));
+    Serial.print(F(" | Group 1 violation: "));
     Serial.print(conflict1 ? F("YES") : F("no"));
-    Serial.print(F(" | Z2 conflict: "));
+    Serial.print(F(" | Group 2 violation: "));
     Serial.print(conflict2 ? F("YES") : F("no"));
     Serial.print(F(" | ALERT: "));
-    Serial.print(possibleConflict ? F("YES") : F("no"));
+    Serial.print((conflict1 || conflict2) ? F("YES") : F("no"));
     Serial.print(F(" | Buzzer: "));
     Serial.println(buzzerActive ? F("ON") : F("off"));
 }
 
-void queueIncidentIfNeeded(
-    bool possibleConflict,
-    bool pedestrian1,
-    bool pedestrian2,
-    bool vehicle1,
-    bool vehicle2
-) {
-    if (possibleConflict && !previousPossibleConflict && !incidentPending) {
-        ++incidentCounter;
+void queueIncidentIfNeeded(CrossingGroup& group, bool conflict, unsigned long now) {
+    if (conflict && !group.previousConflict && !group.incidentPending) {
         snprintf(
-            pendingEventId,
-            sizeof(pendingEventId),
+            group.pendingEventId,
+            sizeof(group.pendingEventId),
             "crossing-%lu-%lu",
-            millis(),
-            incidentCounter
+            now,
+            ++incidentCounter
         );
-        const char* pedestrianStatus = pedestrian1 && pedestrian2
-            ? "Pedestrian detected in zones 1 and 2"
-            : (pedestrian1 ? "Pedestrian detected in zone 1" : "Pedestrian detected in zone 2");
-        const char* vehicleStatus = vehicle1 && vehicle2
-            ? "Vehicle detected in zones 1 and 2"
-            : (vehicle1 ? "Vehicle detected in zone 1" : "Vehicle detected in zone 2");
-        snprintf(
-            pendingIncidentPayload,
-            sizeof(pendingIncidentPayload),
-            "{\"event_id\":\"%s\",\"incident_type\":\"Potential crossing conflict\","
-            "\"detection_method\":\"2 ultrasonic + 2 IR sensors\","
-            "\"pedestrian_status\":\"%s\",\"vehicle_status\":\"%s\","
-            "\"event_description\":\"IR sensors detected a pedestrian while ultrasonic sensors detected a vehicle.\"}",
-            pendingEventId,
-            pedestrianStatus,
-            vehicleStatus
-        );
-        incidentPending = true;
-        // Try to send the new event on this loop pass.
-        lastIncidentAttemptAt = millis() - kIncidentRetryIntervalMs;
+        group.incidentPending = true;
+        group.lastIncidentAttemptAt = now - kIncidentRetryIntervalMs;
     }
 
-    previousPossibleConflict = possibleConflict;
+    group.previousConflict = conflict;
+}
+
+bool tryStartIncident(CrossingGroup& group, unsigned long now) {
+    if (!group.incidentPending || now - group.lastIncidentAttemptAt < kIncidentRetryIntervalMs) {
+        return false;
+    }
+
+    group.lastIncidentAttemptAt = now;
+    char payload[400];
+    snprintf(
+        payload,
+        sizeof(payload),
+        "{\"event_id\":\"%s\",\"incident_type\":\"Potential crossing conflict\","
+        "\"detection_method\":\"IR and ultrasonic sensors\","
+        "\"pedestrian_status\":\"Pedestrian detected in group %d\","
+        "\"vehicle_status\":\"Vehicle detected in group %d\","
+        "\"event_description\":\"Group %d detected a pedestrian and a vehicle at the same time.\"}",
+        group.pendingEventId,
+        group.number,
+        group.number,
+        group.number
+    );
+    if (!startPostJson(kIncidentPath, payload, &group)) {
+        printEvent("incident_retry_pending");
+    }
+    return true;
 }
 
 }  // namespace
@@ -317,16 +372,9 @@ void setup() {
         delay(10);
     }
 
-    pinMode(kTrig1, OUTPUT);
-    pinMode(kEcho1, INPUT);
-    pinMode(kTrig2, OUTPUT);
-    pinMode(kEcho2, INPUT);
-    pinMode(kIr1, INPUT);
-    pinMode(kIr2, INPUT);
+    initializeGroupPins(group1);
+    initializeGroupPins(group2);
     pinMode(kBuzzerPin, OUTPUT);
-
-    digitalWrite(kTrig1, LOW);
-    digitalWrite(kTrig2, LOW);
     digitalWrite(kBuzzerPin, LOW);
 
     WiFi.setTimeout(kWifiConnectWaitMs);
@@ -336,25 +384,22 @@ void setup() {
 }
 
 void loop() {
+    const float distance1 = getDistance(group1.trigPin, group1.echoPin);
+    const bool pedestrian1 = digitalRead(group1.irPin) == kIrDetectedState;
     // Keep the two ultrasonic pings apart to reduce cross-talk.
-    const float distance1 = getDistance(kTrig1, kEcho1);
     delay(60);
-    const float distance2 = getDistance(kTrig2, kEcho2);
+    const float distance2 = getDistance(group2.trigPin, group2.echoPin);
+    const bool pedestrian2 = digitalRead(group2.irPin) == kIrDetectedState;
 
-    const bool pedestrian1 = digitalRead(kIr1) == kIrDetectedState;
-    const bool pedestrian2 = digitalRead(kIr2) == kIrDetectedState;
-    const bool vehicle1 = distance1 > 0.0F && distance1 <= kDistanceThresholdCm;
-    const bool vehicle2 = distance2 > 0.0F && distance2 <= kDistanceThresholdCm;
-    const bool pedestrianDetected = pedestrian1 || pedestrian2;
-    const bool vehicleDetected = vehicle1 || vehicle2;
+    const bool vehicle1 = distance1 > 0.0F && distance1 <= kUltrasonic1RangeCm;
+    const bool vehicle2 = distance2 > 0.0F && distance2 <= kUltrasonic2RangeCm;
     const bool conflict1 = pedestrian1 && vehicle1;
     const bool conflict2 = pedestrian2 && vehicle2;
-    // A single sensor group alone is not a conflict: a person and a vehicle
-    // must both be detected before the alarm or incident is activated.
-    const bool possibleConflict = pedestrianDetected && vehicleDetected;
-    setBuzzer(possibleConflict);
-
     const unsigned long now = millis();
+    updateBuzzerAlert(pedestrian1 || pedestrian2, now);
+    updateWarningLeds(group1, pedestrian1, conflict1, now);
+    updateWarningLeds(group2, pedestrian2, conflict2, now);
+
     if (now - lastSensorPrintAt >= kSensorPrintIntervalMs) {
         printSensorStatus(
             distance1,
@@ -363,16 +408,14 @@ void loop() {
             pedestrian2,
             vehicle1,
             vehicle2,
-            pedestrianDetected,
-            vehicleDetected,
             conflict1,
             conflict2,
-            possibleConflict,
-            possibleConflict
+            buzzerIsOn
         );
         lastSensorPrintAt = now;
     }
-    queueIncidentIfNeeded(possibleConflict, pedestrian1, pedestrian2, vehicle1, vehicle2);
+    queueIncidentIfNeeded(group1, conflict1, now);
+    queueIncidentIfNeeded(group2, conflict2, now);
 
     if (now - lastWifiStatusCheckAt >= kWifiStatusPollIntervalMs) {
         lastWifiStatusCheckAt = now;
@@ -396,15 +439,17 @@ void loop() {
         beginWifiConnection();
     }
 
-    if (activeApiPath != nullptr) {
+    if (apiRequestActive) {
         pollApiResponse();
-    } else if (wifiConnected && incidentPending && now - lastIncidentAttemptAt >= kIncidentRetryIntervalMs) {
-        lastIncidentAttemptAt = now;
-        if (!startPostJson(kIncidentPath, pendingIncidentPayload)) {
-            printEvent("incident_retry_pending");
-        }
-    } else if (wifiConnected && millis() - lastHeartbeatAt >= kHeartbeatIntervalMs) {
+        return;
+    }
+
+    if (!wifiConnected || tryStartIncident(group1, now) || tryStartIncident(group2, now)) {
+        return;
+    }
+
+    if (millis() - lastHeartbeatAt >= kHeartbeatIntervalMs) {
         lastHeartbeatAt = millis();
-        startHeartbeat(distance1, distance2);
+        startHeartbeat();
     }
 }

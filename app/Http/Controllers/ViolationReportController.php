@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -53,6 +54,24 @@ class ViolationReportController extends Controller
         return view('violations.show', [
             'currentTeam' => $team,
             'incident' => $record,
+        ]);
+    }
+
+    public function evidence(Request $request): StreamedResponse
+    {
+        $record = $this->teamForRequest($request)->incidents()
+            ->findOrFail((string) $request->route('incident'));
+        $path = $record->evidence_path;
+
+        abort_if($path === null || $path === '', 404);
+
+        $storage = Storage::disk($record->hasCameraEvidence() ? 'local' : 'public');
+
+        abort_unless($storage->exists($path), 404);
+
+        return $storage->response($path, null, [
+            'X-Content-Type-Options' => 'nosniff',
+            'Content-Security-Policy' => 'sandbox',
         ]);
     }
 
@@ -127,8 +146,9 @@ class ViolationReportController extends Controller
             CrossingIncident::query()->where('team_id', $team->id)->with('assignedEnforcer'),
             $this->validatedFilters($request),
         )->latest('occurred_at')->get();
+        $displayTimezone = config()->string('app.display_timezone');
 
-        return response()->streamDownload(function () use ($records): void {
+        return response()->streamDownload(function () use ($records, $displayTimezone): void {
             $stream = fopen('php://output', 'w');
 
             if ($stream === false) {
@@ -141,7 +161,7 @@ class ViolationReportController extends Controller
                 foreach ($records as $record) {
                     fputcsv($stream, [
                         $record->incident_code,
-                        $record->occurred_at->format('Y-m-d H:i:s'),
+                        $record->occurred_at->copy()->setTimezone($displayTimezone)->format('Y-m-d H:i:s'),
                         $record->incident_type,
                         $this->statusLabel($record->status),
                         $record->assignedEnforcer->name ?? 'Unassigned',
@@ -151,7 +171,7 @@ class ViolationReportController extends Controller
             } finally {
                 fclose($stream);
             }
-        }, 'violation-reports-'.now()->format('Ymd').'.csv', [
+        }, 'violation-reports-'.now($displayTimezone)->format('Ymd').'.csv', [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
@@ -188,7 +208,9 @@ class ViolationReportController extends Controller
         }
 
         if ($filters['date'] === 'today') {
-            $query->whereDate('occurred_at', today());
+            $localDay = today(config()->string('app.display_timezone'));
+            $query->where('occurred_at', '>=', $localDay->copy()->utc())
+                ->where('occurred_at', '<', $localDay->addDay()->utc());
         } elseif ($filters['date'] === '7_days') {
             $query->where('occurred_at', '>=', now()->subDays(7));
         } elseif ($filters['date'] === '30_days') {

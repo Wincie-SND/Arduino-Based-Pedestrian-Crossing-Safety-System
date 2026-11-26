@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Enums\TeamRole;
+use App\Models\CrossingDevice;
 use App\Models\Team;
-use App\Models\TeamInvitation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -34,107 +34,94 @@ class DashboardTest extends TestCase
         $response->assertOk();
     }
 
-    public function test_dashboard_includes_pending_invitations_for_the_authenticated_user()
+    public function test_the_dashboard_displays_each_team_role(): void
     {
-        $owner = User::factory()->create(['name' => 'Taylor Otwell']);
-        $invitedUser = User::factory()->create(['email' => 'invited@example.com']);
-        $team = Team::factory()->create(['name' => 'Laravel Team']);
-
-        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-
-        $invitation = TeamInvitation::factory()->create([
-            'team_id' => $team->id,
-            'email' => 'invited@example.com',
-            'invited_by' => $owner->id,
-        ]);
-
-        $response = $this
-            ->actingAs($invitedUser)
-            ->get(route('dashboard'));
-
-        $response->assertOk();
-        $response->assertViewIs('dashboard')
-            ->assertViewHas('pendingInvitations', function ($invitations) use ($invitation, $team) {
-                return $invitations->count() === 1
-                    && $invitations[0]['code'] === $invitation->code
-                    && $invitations[0]['inviterName'] === 'Taylor Otwell'
-                    && $invitations[0]['team']['name'] === 'Laravel Team'
-                    && $invitations[0]['team']['slug'] === $team->slug
-                    && ! array_key_exists('teamName', $invitations[0]);
-            });
-    }
-
-    public function test_dashboard_does_not_include_accepted_invitations()
-    {
-        $owner = User::factory()->create();
-        $invitedUser = User::factory()->create(['email' => 'invited@example.com']);
         $team = Team::factory()->create();
 
-        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
+        foreach ([
+            [TeamRole::Admin, 'Admin'],
+            [TeamRole::Enforcer, 'Enforcer'],
+        ] as [$role, $label]) {
+            $user = User::factory()->create();
+            $team->members()->attach($user, ['role' => $role->value]);
 
-        TeamInvitation::factory()->accepted()->create([
-            'team_id' => $team->id,
-            'email' => 'invited@example.com',
-            'invited_by' => $owner->id,
-        ]);
-
-        $response = $this
-            ->actingAs($invitedUser)
-            ->get(route('dashboard'));
-
-        $response->assertOk();
-        $response->assertViewIs('dashboard')->assertViewHas('pendingInvitations', fn ($invitations) => $invitations->isEmpty());
+            $this->actingAs($user)
+                ->get(route('dashboard', ['current_team' => $team->slug]))
+                ->assertOk()
+                ->assertSee('<span class="account-role">'.$label.'</span>', escape: false);
+        }
     }
 
-    public function test_dashboard_excludes_expired_invitations_without_deleting_them()
+    public function test_browser_camera_status_is_independent_of_registered_hardware_heartbeats(): void
     {
-        $owner = User::factory()->create();
-        $invitedUser = User::factory()->create(['email' => 'invited@example.com']);
-        $team = Team::factory()->create();
-
-        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-
-        $invitation = TeamInvitation::factory()->expired()->create([
-            'team_id' => $team->id,
-            'email' => 'invited@example.com',
-            'invited_by' => $owner->id,
+        $user = User::factory()->create();
+        $team = $user->currentTeam;
+        $camera = $team->devices()->create([
+            'name' => 'Camera module',
+            'category' => 'camera',
+            'status' => 'offline',
         ]);
-
-        $response = $this
-            ->actingAs($invitedUser)
-            ->get(route('dashboard'));
-
-        $response->assertOk();
-        $response->assertViewIs('dashboard')->assertViewHas('pendingInvitations', fn ($invitations) => $invitations->isEmpty());
-
-        $this->assertDatabaseHas('team_invitations', [
-            'id' => $invitation->id,
+        $controller = $team->devices()->create([
+            'name' => 'Arduino control board',
+            'category' => 'controller',
+            'status' => 'online',
+            'last_seen_at' => now(),
         ]);
+        $parameters = ['current_team' => $team->slug];
+
+        $this->actingAs($user)->get(route('dashboard', $parameters))
+            ->assertOk()
+            ->assertViewHas('systemStatus', 'online')
+            ->assertSee('data-camera-device-status>Offline', escape: false)
+            ->assertDontSee('data-device-id="'.$camera->id.'"', escape: false);
+
+        $this->getJson(route('dashboard.device-status', $parameters))
+            ->assertOk()
+            ->assertExactJson([
+                'devices' => [['id' => $controller->id, 'status' => 'online']],
+                'system_status' => 'online',
+            ]);
     }
 
-    public function test_dashboard_does_not_include_or_delete_other_users_invitations()
+    public function test_led_warning_lights_follow_the_arduino_heartbeat(): void
     {
-        $owner = User::factory()->create();
-        $invitedUser = User::factory()->create(['email' => 'invited@example.com']);
-        $team = Team::factory()->create();
+        $this->freezeSecond();
 
-        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-
-        $invitation = TeamInvitation::factory()->expired()->create([
-            'team_id' => $team->id,
-            'email' => 'someone@example.com',
-            'invited_by' => $owner->id,
+        $user = User::factory()->create();
+        $team = $user->currentTeam;
+        $token = 'test-arduino-token';
+        $team->devices()->forceCreate([
+            'name' => 'Arduino control board',
+            'category' => 'controller',
+            'status' => 'offline',
+            'api_token_hash' => hash('sha256', $token),
         ]);
 
-        $response = $this
-            ->actingAs($invitedUser)
-            ->get(route('dashboard'));
-
-        $response->assertOk();
-        $response->assertViewIs('dashboard')->assertViewHas('pendingInvitations', fn ($invitations) => $invitations->isEmpty());
-
-        $this->assertDatabaseHas('team_invitations', [
-            'id' => $invitation->id,
+        $leds = $team->devices()->create([
+            'name' => 'LED warning lights',
+            'category' => 'warning',
+            'status' => 'offline',
         ]);
+
+        $heartbeat = route('api.device.heartbeat');
+        $status = route('dashboard.device-status', ['current_team' => $team->slug]);
+        $headers = ['Authorization' => 'Bearer '.$token];
+        $components = ['ultrasonic' => 'online', 'infrared' => 'online', 'buzzer' => 'online'];
+
+        $this->postJson($heartbeat, ['components' => $components], $headers)->assertOk();
+        $this->actingAs($user)->getJson($status)
+            ->assertOk()
+            ->assertJsonPath('devices.1', ['id' => $leds->id, 'status' => 'offline']);
+
+        $this->postJson($heartbeat, ['components' => $components + ['leds' => 'online']], $headers)
+            ->assertOk();
+        $this->getJson($status)
+            ->assertOk()
+            ->assertJsonPath('devices.1', ['id' => $leds->id, 'status' => 'online']);
+
+        $this->travel(CrossingDevice::HEARTBEAT_TIMEOUT_SECONDS + 1)->seconds();
+        $this->getJson($status)
+            ->assertOk()
+            ->assertJsonPath('devices.1', ['id' => $leds->id, 'status' => 'offline']);
     }
 }

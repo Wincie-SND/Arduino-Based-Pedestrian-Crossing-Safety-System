@@ -12,7 +12,6 @@
                 <a class="button secondary" href="{{ route('teams.index') }}">Manage teams</a>
             @else
                 <a class="button" href="{{ route('login') }}">Log in</a>
-                @if (Route::has('register'))<a class="button secondary" href="{{ route('register') }}">Create account</a>@endif
             @endauth
         </div>
     </div>

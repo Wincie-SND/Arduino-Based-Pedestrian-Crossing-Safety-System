@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Teams;
 
 use App\Actions\Teams\CreateTeam;
-use App\Enums\TeamRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Teams\DeleteTeamRequest;
 use App\Http\Requests\Teams\SaveTeamRequest;
@@ -49,18 +48,14 @@ class TeamController extends Controller
      */
     public function edit(Request $request, Team $team): View
     {
-        Gate::authorize('inviteMember', $team);
+        Gate::authorize('addMember', $team);
 
         $user = $request->user();
 
         return view('teams.edit', [
             'team' => $team,
             'members' => $team->members()->get(),
-            'invitations' => $team->invitations()
-                ->whereNull('accepted_at')
-                ->get(),
             'permissions' => $user->toTeamPermissions($team),
-            'availableRoles' => TeamRole::assignable(),
         ]);
     }
 
@@ -103,17 +98,15 @@ class TeamController extends Controller
 
         $user = $request->user();
 
-        $fallbackTeam = $user->isCurrentTeam($team)
-            ? $user->fallbackTeam($team)
-            : null;
+        DB::transaction(function () use ($team, $user): void {
+            $team->memberships()
+                ->where('user_id', $user->id)
+                ->delete();
 
-        $team->memberships()
-            ->where('user_id', $user->id)
-            ->delete();
-
-        if ($fallbackTeam) {
-            $user->switchTeam($fallbackTeam);
-        }
+            if ($user->isCurrentTeam($team)) {
+                $user->switchTeam($user->fallbackTeam());
+            }
+        });
 
         return to_route('teams.index')->with('toast', __('You left the team ":name"', ['name' => $team->name]));
     }
@@ -131,14 +124,16 @@ class TeamController extends Controller
         DB::transaction(function () use ($user, $team) {
             User::where('current_team_id', $team->id)
                 ->where('id', '!=', $user->id)
-                ->each(fn (User $affectedUser) => $affectedUser->switchTeam($affectedUser->personalTeam()));
+                ->each(fn (User $affectedUser) => $affectedUser->switchTeam(
+                    $affectedUser->personalTeam() ?? $affectedUser->fallbackTeam($team),
+                ));
 
             $team->invitations()->delete();
             $team->memberships()->delete();
             $team->delete();
         });
 
-        if ($fallbackTeam) {
+        if ($user->isCurrentTeam($team)) {
             $user->switchTeam($fallbackTeam);
         }
 
