@@ -9,7 +9,6 @@
         <div class="welcome-actions">
             @auth
                 @if (auth()->user()->currentTeam)<a class="button" href="{{ route('dashboard', ['current_team' => auth()->user()->currentTeam->slug]) }}">Open dashboard</a>@endif
-                <a class="button secondary" href="{{ route('teams.index') }}">Manage teams</a>
             @else
                 <a class="button" href="{{ route('login') }}">Log in</a>
             @endauth

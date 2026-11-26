@@ -25,32 +25,6 @@ class TeamPolicy
     }
 
     /**
-     * Determine whether the user can create models.
-     */
-    public function create(User $user): bool
-    {
-        return $user->ownedTeams()->exists();
-    }
-
-    /**
-     * Determine whether the user can update the model.
-     */
-    public function update(User $user, Team $team): bool
-    {
-        return $user->hasTeamPermission($team, TeamPermission::UpdateTeam);
-    }
-
-    /**
-     * Determine whether the user can leave the team.
-     */
-    public function leave(User $user, Team $team): bool
-    {
-        return ! $team->is_personal
-            && $user->belongsToTeam($team)
-            && ! $user->ownsTeam($team);
-    }
-
-    /**
      * Determine whether the user can add a member to the team.
      */
     public function addMember(User $user, Team $team): bool
@@ -72,13 +46,5 @@ class TeamPolicy
     public function removeMember(User $user, Team $team): bool
     {
         return $user->hasTeamPermission($team, TeamPermission::RemoveMember);
-    }
-
-    /**
-     * Determine whether the user can delete the model.
-     */
-    public function delete(User $user, Team $team): bool
-    {
-        return ! $team->is_personal && $user->hasTeamPermission($team, TeamPermission::DeleteTeam);
     }
 }

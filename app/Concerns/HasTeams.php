@@ -2,7 +2,6 @@
 
 namespace App\Concerns;
 
-use App\Data\TeamPermissions;
 use App\Data\UserTeam;
 use App\Enums\TeamPermission;
 use App\Enums\TeamRole;
@@ -159,22 +158,6 @@ trait HasTeams
             role: $role?->value,
             roleLabel: $role?->label(),
             isCurrent: $this->isCurrentTeam($team),
-        );
-    }
-
-    /**
-     * Get the standard permissions for a team as a TeamPermissions object.
-     */
-    public function toTeamPermissions(Team $team): TeamPermissions
-    {
-        $role = $this->teamRole($team);
-
-        return new TeamPermissions(
-            canUpdateTeam: $role?->hasPermission(TeamPermission::UpdateTeam) ?? false,
-            canDeleteTeam: $role?->hasPermission(TeamPermission::DeleteTeam) ?? false,
-            canAddMember: $role?->hasPermission(TeamPermission::AddMember) ?? false,
-            canUpdateMember: $role?->hasPermission(TeamPermission::UpdateMember) ?? false,
-            canRemoveMember: $role?->hasPermission(TeamPermission::RemoveMember) ?? false,
         );
     }
 

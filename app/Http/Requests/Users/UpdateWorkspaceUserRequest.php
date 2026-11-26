@@ -1,12 +1,13 @@
 <?php
 
-namespace App\Http\Requests\Teams;
+namespace App\Http\Requests\Users;
 
-use App\Rules\TeamName;
+use App\Enums\TeamRole;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
-class SaveTeamRequest extends FormRequest
+class UpdateWorkspaceUserRequest extends FormRequest
 {
     /**
      * Get the validation rules that apply to the request.
@@ -16,7 +17,7 @@ class SaveTeamRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255', new TeamName],
+            'role' => ['required', 'string', Rule::enum(TeamRole::class)->only(TeamRole::assignable())],
         ];
     }
 }

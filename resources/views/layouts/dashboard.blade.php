@@ -44,7 +44,7 @@
                 @endif
                 @if (auth()->user()->currentTeam)
                     @can('addMember', auth()->user()->currentTeam)
-                        <a @class(['dashboard-nav-link', 'active' => request()->routeIs('teams.*')]) href="{{ route('teams.index') }}" @if (request()->routeIs('teams.*')) aria-current="page" @endif>
+                        <a @class(['dashboard-nav-link', 'active' => request()->routeIs('users.*')]) href="{{ route('users.index', ['current_team' => $accountTeam->slug]) }}" @if (request()->routeIs('users.*')) aria-current="page" @endif>
                             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20"/><circle cx="9.5" cy="7" r="3.5"/><path d="M17 11a3.5 3.5 0 1 0-1.5-6.66M17 14.5h.5a4 4 0 0 1 4 4V20"/></svg>
                             <span>User management</span>
                         </a>

@@ -14,7 +14,7 @@ trait RedirectsToCurrentTeam
 
         $team = $user->currentTeam ?? $user->personalTeam() ?? $user->fallbackTeam();
         if ($team === null) {
-            return route('teams.index', absolute: false);
+            return route('workspace.unassigned', absolute: false);
         }
 
         URL::defaults(['current_team' => $team->slug]);

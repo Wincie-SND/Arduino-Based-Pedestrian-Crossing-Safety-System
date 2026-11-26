@@ -2,12 +2,11 @@
 
 Pedestrian crossing monitoring and incident management for authorized TOMECO personnel.
 
-## Team roles
+## Workspace roles
 
-All team roles can monitor crossings, view notifications, and review or export violation reports for their team.
+Admins and Enforcers can monitor crossings, view notifications, and review or export violation reports for their workspace.
 
-- **Admin** manages the team and creates Enforcer accounts from **User Management**.
-- **Enforcer** can update team settings.
+- **Admin** creates Enforcer accounts and manages workspace access from **User Management**.
 
 To create an Enforcer account, enter the person's name, email address, and initial password in **User Management**. The account is assigned to the current workspace. The Enforcer signs in and verifies their email address to access the workspace.
 

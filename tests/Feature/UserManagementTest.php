@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Teams;
+namespace Tests\Feature;
 
 use App\Enums\TeamRole;
 use App\Models\Team;
@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
-class TeamMemberTest extends TestCase
+class UserManagementTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -20,8 +20,8 @@ class TeamMemberTest extends TestCase
         $team = $admin->currentTeam;
         $input = $this->accountInput(['email' => 'ENFORCER@EXAMPLE.COM', 'role' => TeamRole::Admin->value]);
 
-        $this->actingAs($admin)->post(route('teams.members.store', $team), $input)
-            ->assertRedirect(route('teams.edit', $team))
+        $this->actingAs($admin)->post(route('users.store', $team), $input)
+            ->assertRedirect(route('users.index', $team))
             ->assertSessionHas('toast', 'Enforcer account created.');
 
         $enforcer = User::where('email', 'enforcer@example.com')->firstOrFail();
@@ -30,7 +30,7 @@ class TeamMemberTest extends TestCase
         $this->assertSame(TeamRole::Enforcer, $enforcer->teamRole($team));
         $this->assertTrue(Hash::check($input['password'], $enforcer->password));
         $this->assertFalse($enforcer->hasVerifiedEmail());
-        $this->get(route('teams.edit', $team))->assertSee('enforcer@example.com');
+        $this->get(route('users.index', $team))->assertSee('enforcer@example.com');
 
         $dashboard = route('dashboard', ['current_team' => $team->slug]);
         $this->post(route('logout'));
@@ -58,13 +58,12 @@ class TeamMemberTest extends TestCase
         $enforcer->markEmailAsVerified();
         $team->members()->attach($enforcer, ['role' => TeamRole::Enforcer->value]);
         $outsider = User::factory()->create();
-        $endpoint = route('teams.members.store', $team);
+        $endpoint = route('users.store', $team);
 
         $this->post($endpoint, $this->accountInput())->assertRedirect(route('login'));
         $this->actingAs($outsider)->post($endpoint, $this->accountInput())->assertForbidden();
         $this->actingAs($enforcer)->post($endpoint, $this->accountInput())->assertForbidden();
-        $this->get(route('teams.edit', $team))->assertForbidden();
-        $this->post(route('teams.store'), ['name' => 'Another workspace'])->assertForbidden();
+        $this->get(route('users.index', $team))->assertForbidden();
 
         $this->assertDatabaseMissing('users', ['email' => 'enforcer@example.com']);
     }
@@ -75,7 +74,7 @@ class TeamMemberTest extends TestCase
         $existing = User::factory()->create(['email' => 'enforcer@example.com']);
         $team = $admin->currentTeam;
 
-        $this->actingAs($admin)->post(route('teams.members.store', $team), $this->accountInput([
+        $this->actingAs($admin)->post(route('users.store', $team), $this->accountInput([
             'email' => 'ENFORCER@EXAMPLE.COM',
             'password_confirmation' => 'different-password',
         ]))->assertSessionHasErrors(['email', 'password']);
@@ -89,12 +88,12 @@ class TeamMemberTest extends TestCase
         $admin = User::factory()->create();
         $team = $admin->currentTeam;
 
-        $this->actingAs($admin)->post(route('teams.members.store', $team), $this->accountInput())
+        $this->actingAs($admin)->post(route('users.store', $team), $this->accountInput())
             ->assertSessionHasNoErrors();
 
         $enforcer = User::where('email', 'enforcer@example.com')->firstOrFail();
-        $this->delete(route('teams.members.destroy', [$team, $enforcer]))
-            ->assertRedirect(route('teams.edit', $team));
+        $this->delete(route('users.destroy', [$team, $enforcer]))
+            ->assertRedirect(route('users.index', $team));
 
         $this->assertFalse($enforcer->belongsToTeam($team));
         $this->assertNull($enforcer->fresh()->current_team_id);
@@ -111,11 +110,11 @@ class TeamMemberTest extends TestCase
 
         $response = $this
             ->actingAs($admin)
-            ->patch(route('teams.members.update', [$team, $member]), [
+            ->patch(route('users.update', [$team, $member]), [
                 'role' => TeamRole::Enforcer->value,
             ]);
 
-        $response->assertRedirect(route('teams.edit', $team));
+        $response->assertRedirect(route('users.index', $team));
 
         $this->assertEquals(
             TeamRole::Enforcer->value,
@@ -136,7 +135,7 @@ class TeamMemberTest extends TestCase
 
         $response = $this
             ->actingAs($enforcer)
-            ->patch(route('teams.members.update', [$team, $member]), [
+            ->patch(route('users.update', [$team, $member]), [
                 'role' => TeamRole::Enforcer->value,
             ]);
 
@@ -154,9 +153,9 @@ class TeamMemberTest extends TestCase
 
         $response = $this
             ->actingAs($admin)
-            ->delete(route('teams.members.destroy', [$team, $member]));
+            ->delete(route('users.destroy', [$team, $member]));
 
-        $response->assertRedirect(route('teams.edit', $team));
+        $response->assertRedirect(route('users.index', $team));
 
         $this->assertFalse($member->fresh()->belongsToTeam($team));
     }
@@ -174,7 +173,7 @@ class TeamMemberTest extends TestCase
 
         $response = $this
             ->actingAs($enforcer)
-            ->delete(route('teams.members.destroy', [$team, $member]));
+            ->delete(route('users.destroy', [$team, $member]));
 
         $response->assertForbidden();
     }
@@ -188,7 +187,7 @@ class TeamMemberTest extends TestCase
 
         $response = $this
             ->actingAs($admin)
-            ->delete(route('teams.members.destroy', [$team, $admin]));
+            ->delete(route('users.destroy', [$team, $admin]));
 
         $response->assertForbidden();
 
@@ -203,7 +202,7 @@ class TeamMemberTest extends TestCase
         $team->members()->attach($admin, ['role' => TeamRole::Admin->value]);
 
         $this->actingAs($admin)
-            ->patch(route('teams.members.update', [$team, $admin]), [
+            ->patch(route('users.update', [$team, $admin]), [
                 'role' => TeamRole::Enforcer->value,
             ])
             ->assertForbidden();
@@ -222,7 +221,7 @@ class TeamMemberTest extends TestCase
 
         $this->actingAs($admin);
         foreach ([TeamRole::Admin->value, 'member'] as $role) {
-            $this->patch(route('teams.members.update', [$team, $member]), [
+            $this->patch(route('users.update', [$team, $member]), [
                 'role' => $role,
             ])->assertSessionHasErrors('role');
         }
@@ -244,7 +243,7 @@ class TeamMemberTest extends TestCase
 
         $this
             ->actingAs($admin)
-            ->delete(route('teams.members.destroy', [$team, $member]));
+            ->delete(route('users.destroy', [$team, $member]));
 
         $this->assertEquals($personalTeam->id, $member->fresh()->current_team_id);
     }

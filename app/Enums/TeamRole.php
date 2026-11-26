@@ -24,9 +24,7 @@ enum TeamRole: string
     {
         return match ($this) {
             self::Admin => TeamPermission::cases(),
-            self::Enforcer => [
-                TeamPermission::UpdateTeam,
-            ],
+            self::Enforcer => [],
         };
     }
 

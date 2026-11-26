@@ -3,8 +3,10 @@
 use App\Http\Controllers\CrossingCameraController;
 use App\Http\Controllers\CrossingNotificationController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\ViolationReportController;
 use App\Http\Middleware\EnsureTeamMembership;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -14,12 +16,33 @@ Route::get('/', function () {
         return to_route('login');
     }
 
-    $team = $user->currentTeam ?? $user->personalTeam();
+    $team = $user->currentTeam ?? $user->personalTeam() ?? $user->fallbackTeam();
 
     return $team
         ? to_route('dashboard', ['current_team' => $team->slug])
-        : to_route('teams.index');
+        : to_route('workspace.unassigned');
 })->name('home');
+
+Route::view('workspace-unassigned', 'workspace.unassigned')
+    ->middleware(['auth', 'verified'])
+    ->name('workspace.unassigned');
+
+// Redirect old bookmarks and saved sign-in destinations.
+Route::get('settings/teams/{legacyWorkspace?}', function (Request $request) {
+    $user = $request->user();
+    if ($user === null) {
+        return to_route('login');
+    }
+
+    $workspace = $user->currentTeam ?? $user->personalTeam() ?? $user->fallbackTeam();
+    if ($workspace === null) {
+        return to_route('workspace.unassigned');
+    }
+
+    return to_route($user->can('addMember', $workspace) ? 'users.index' : 'dashboard', [
+        'current_team' => $workspace->slug,
+    ]);
+});
 
 Route::prefix('{current_team}')
     ->middleware(['auth', 'verified', EnsureTeamMembership::class])
@@ -34,6 +57,15 @@ Route::prefix('{current_team}')
         Route::get('violations/{incident}', [ViolationReportController::class, 'show'])->whereNumber('incident')->name('violations.show');
         Route::get('violations/{incident}/evidence', [ViolationReportController::class, 'evidence'])->whereNumber('incident')->name('violations.evidence');
         Route::patch('violations/{incident}/review', [ViolationReportController::class, 'review'])->whereNumber('incident')->name('violations.review');
+    });
+
+Route::prefix('{current_team}/users')->name('users.')
+    ->middleware(['auth', 'verified', EnsureTeamMembership::class.':admin'])
+    ->group(function () {
+        Route::get('/', [UserManagementController::class, 'index'])->name('index');
+        Route::post('/', [UserManagementController::class, 'store'])->name('store');
+        Route::patch('{user}', [UserManagementController::class, 'update'])->name('update');
+        Route::delete('{user}', [UserManagementController::class, 'destroy'])->name('destroy');
     });
 
 require __DIR__.'/settings.php';

@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Requests\Teams;
+namespace App\Http\Requests\Users;
 
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 
-class StoreTeamMemberRequest extends FormRequest
+class StoreEnforcerRequest extends FormRequest
 {
     use PasswordValidationRules, ProfileValidationRules;
 
@@ -21,7 +21,7 @@ class StoreTeamMemberRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return $this->user()->can('addMember', $this->route('team'));
+        return $this->user()->can('addMember', $this->route('current_team'));
     }
 
     /** @return array<string, array<int, mixed>> */

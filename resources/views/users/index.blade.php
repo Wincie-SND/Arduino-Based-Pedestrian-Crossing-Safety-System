@@ -3,13 +3,13 @@
 @section('content')
 @use('App\Enums\TeamRole')
 <header class="dashboard-intro">
-    <div><p class="eyebrow">Access management</p><h1>User management</h1><p class="dashboard-summary">Manage authorized accounts for {{ $team->name }}.</p></div>
+    <div><p class="eyebrow">Access management</p><h1>User management</h1><p class="dashboard-summary">Manage authorized accounts for {{ $workspace->name }}.</p></div>
 </header>
 <div class="content-column user-management-content">
-    @if ($permissions->canAddMember)
+    @can('addMember', $workspace)
         <section class="dashboard-panel user-management-panel">
             <header class="panel-heading"><h2>Create an Enforcer account</h2></header>
-            <form method="post" action="{{ route('teams.members.store', ['team' => $team->slug]) }}" class="user-create-form">
+            <form method="post" action="{{ route('users.store', ['current_team' => $workspace->slug]) }}" class="user-create-form">
                 @csrf
                 <div class="field">
                     <label for="enforcer-name">Full name</label>
@@ -33,7 +33,7 @@
                 <div><button class="button" type="submit">Create account</button></div>
             </form>
         </section>
-    @endif
+    @endcan
 
     <section class="dashboard-panel user-management-panel"><header class="panel-heading"><div><h2>Authorized users</h2><p>Accounts with access to this monitoring workspace.</p></div><span class="badge">{{ $members->count() }} users</span></header><div class="table-wrap"><table class="user-management-table"><thead><tr><th>Name</th><th>Email</th><th>Access role</th><th>Actions</th></tr></thead><tbody>
         @foreach ($members as $member)
@@ -41,8 +41,8 @@
             <tr class="user-member-row"><td data-label="Name">{{ $member->name }}</td><td data-label="Email">{{ $member->email }}</td><td data-label="Access role">
                 <span class="badge">{{ $memberRole->label() }}</span>
             </td><td data-label="Actions">
-                @if ($memberRole !== TeamRole::Admin && $permissions->canRemoveMember)
-                    <form method="post" action="{{ route('teams.members.destroy', ['team' => $team->slug, 'user' => $member->id]) }}" onsubmit="return confirm('Remove {{ addslashes($member->name) }} from this workspace?')">@csrf @method('delete')<button class="button danger small" type="submit">Revoke access</button></form>
+                @if ($memberRole !== TeamRole::Admin && auth()->user()->can('removeMember', $workspace))
+                    <form method="post" action="{{ route('users.destroy', ['current_team' => $workspace->slug, 'user' => $member->id]) }}" onsubmit="return confirm('Revoke access to this workspace?')">@csrf @method('delete')<button class="button danger small" type="submit">Revoke access</button></form>
                 @else <span class="muted">—</span> @endif
             </td></tr>
         @endforeach
