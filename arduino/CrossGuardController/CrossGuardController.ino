@@ -21,7 +21,8 @@ constexpr unsigned long kPedestrianAlertDurationMs = 4000UL;
 constexpr int kBuzzerPin = 4;
 constexpr bool kPassiveBuzzer = false;
 constexpr unsigned int kPassiveBuzzerFrequencyHz = 2000;
-constexpr unsigned long kBuzzerBeepIntervalMs = 250UL;
+constexpr unsigned long kPedestrianBuzzerBeepIntervalMs = 250UL;
+constexpr unsigned long kIncidentBuzzerBeepIntervalMs = 125UL;
 
 constexpr unsigned long kWarningLedSlowBlinkIntervalMs = 500UL;
 constexpr unsigned long kWarningLedFastBlinkIntervalMs = 200UL;
@@ -78,6 +79,8 @@ bool wifiAttemptStarted = false;
 bool wasConnected = false;
 bool buzzerIsOn = false;
 PedestrianAlert buzzerAlert;
+bool buzzerIncidentDetected = false;
+unsigned long buzzerIncidentStartedAt = 0;
 WiFiClient apiClient;
 bool apiRequestActive = false;
 CrossingGroup* activeIncidentGroup = nullptr;
@@ -120,10 +123,22 @@ void setBuzzer(bool alarmOn) {
     buzzerIsOn = alarmOn;
 }
 
-void updateBuzzerAlert(bool pedestrianDetected, unsigned long now) {
+void updateBuzzerAlert(bool pedestrianDetected, bool incidentDetected, unsigned long now) {
     buzzerAlert.update(pedestrianDetected, now);
+
+    if (incidentDetected && !buzzerIncidentDetected) {
+        buzzerIncidentStartedAt = now;
+    }
+    buzzerIncidentDetected = incidentDetected;
+
+    if (incidentDetected) {
+        const unsigned long incidentElapsed = now - buzzerIncidentStartedAt;
+        setBuzzer((incidentElapsed / kIncidentBuzzerBeepIntervalMs) % 2UL == 0);
+        return;
+    }
+
     const unsigned long elapsed = now - buzzerAlert.startedAt;
-    setBuzzer(buzzerAlert.active && (elapsed / kBuzzerBeepIntervalMs) % 2UL == 0);
+    setBuzzer(buzzerAlert.active && (elapsed / kPedestrianBuzzerBeepIntervalMs) % 2UL == 0);
 }
 
 void initializeGroupPins(const CrossingGroup& group) {
@@ -396,7 +411,7 @@ void loop() {
     const bool conflict1 = pedestrian1 && vehicle1;
     const bool conflict2 = pedestrian2 && vehicle2;
     const unsigned long now = millis();
-    updateBuzzerAlert(pedestrian1 || pedestrian2, now);
+    updateBuzzerAlert(pedestrian1 || pedestrian2, conflict1 || conflict2, now);
     updateWarningLeds(group1, pedestrian1, conflict1, now);
     updateWarningLeds(group2, pedestrian2, conflict2, now);
 
